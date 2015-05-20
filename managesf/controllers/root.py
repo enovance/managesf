@@ -18,7 +18,7 @@ from pecan import expose
 from pecan import abort
 from pecan.rest import RestController
 from pecan import request, response
-from managesf.controllers import gerrit, redminec, backup
+from managesf.controllers import gerrit, redminec, backup, localuser
 import logging
 import os.path
 
@@ -278,8 +278,83 @@ class ProjectController(RestController):
             return report_unhandled_error(e)
 
 
+class LocalUserController(RestController):
+
+    @expose("json")
+    def post(self, username):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        infos = request.json if request.content_length else {}
+        try:
+            ret = localuser.update_user(username, infos)
+        except localuser.AddUserForbidden:
+            abort(403)
+        except (localuser.InvalidInfosInput, localuser.BadUserInfos):
+            abort(400)
+        except Exception as e:
+            return report_unhandled_error(e)
+        if isinstance(ret, dict):
+            # user created - set correct status code
+            response.status = 201
+        return ret
+
+    @expose("json")
+    def get(self, username):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        try:
+            ret = localuser.get_user(username)
+        except localuser.GetUserForbidden:
+            abort(403)
+        except localuser.UserNotFound:
+            abort(404)
+        except Exception as e:
+            return report_unhandled_error(e)
+        return ret
+
+    @expose("json")
+    def delete(self, username):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        try:
+            ret = localuser.delete_user(username)
+        except localuser.DeleteUserForbidden:
+            abort(403)
+        except localuser.UserNotFound:
+            abort(404)
+        except Exception as e:
+            return report_unhandled_error(e)
+        return ret
+
+
+class LocalUserBindController(RestController):
+
+    @expose("json")
+    def get(self, username):
+        authorization = request.headers.get('Authorization', None)
+        if not authorization:
+            abort(401)
+        try:
+            ret = localuser.bind_user(username, authorization)
+        except (localuser.BindForbidden, localuser.UserNotFound):
+            abort(401)
+        except Exception as e:
+            return report_unhandled_error(e)
+        if not ret:
+            abort(401)
+        return ret
+
+
 class RootController(object):
     project = ProjectController()
     replication = ReplicationController()
     backup = BackupController()
     restore = RestoreController()
+    user = LocalUserController()
+    bind = LocalUserBindController()
