@@ -35,6 +35,7 @@ class FunctionalTest(TestCase):
                   'redmine': c.redmine,
                   'app': c.app,
                   'admin': c.admin,
+                  'sqlalchemy': c.sqlalchemy,
                   'auth': c.auth}
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
