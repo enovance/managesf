@@ -236,7 +236,7 @@ def get_cookie(args):
 
 
 def response(resp):
-    if resp.status_code >= 200 and resp.status_code < 206:
+    if resp.status_code >= 200 and resp.status_code < 400:
         print resp.text
         return True
     else:
@@ -435,6 +435,7 @@ def user_management_action(args, base_url, headers):
         return False
     url = '%s/user/%s' % (base_url, args.username)
     if args.subcommand in ['create', 'update']:
+        headers['Content-Type'] = 'application/json'
         password = None
         if not getattr(args, 'password', False):
             password = getpass.getpass("Enter password: ")
