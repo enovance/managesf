@@ -82,12 +82,13 @@ def project_user_command(sp):
 
 
 def user_management_command(sp):
-    cump = sp.add_parser('create')
+    cump = sp.add_parser('create', help='Create user. Admin rights required')
     cump.add_argument('--username', '-u', nargs='?', metavar='username',
                       required=True, help='A unique username/login')
     cump.add_argument('--password', '-p', nargs='?', metavar='password',
                       required=False,
-                      help='The user password, can be provided later')
+                      help='The user password, can be provided iteractively'
+                           ' if this option is empty')
     cump.add_argument('--email', '-e', nargs='?', metavar='email',
                       required=True, help='The user email')
     cump.add_argument('--fullname', '-f', nargs='?', metavar='John Doe',
@@ -95,12 +96,16 @@ def user_management_command(sp):
                       help="The user's full name, defaults to username")
     cump.add_argument('--ssh-key', '-s', nargs='?', metavar='/path/to/pub_key',
                       required=False, help="The user's ssh public key file")
-    uump = sp.add_parser('update')
+    uump = sp.add_parser('update', help='Update user details. Admin can update'
+                         ' details of all users. User can update its own'
+                         ' details.')
     uump.add_argument('--username', '-u', nargs='?', metavar='username',
                       required=False,
                       help='the user to update, defaults to current user')
-    uump.add_argument('--password', '-p', action='store_false',
-                      help='Set this flag to change the user password')
+    uump.add_argument('--password', '-p', nargs='?', metavar='password',
+                      required=False,
+                      help='The user password, can be provided iteractively'
+                           ' if this option is empty')
     uump.add_argument('--email', '-e', nargs='?', metavar='email',
                       required=False, help='The user email')
     uump.add_argument('--fullname', '-f', nargs='?', metavar='John Doe',
