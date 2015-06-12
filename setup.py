@@ -29,6 +29,21 @@ except:
 VERSION = '0.3.1'
 
 
+INSTALL_REQUIRES = ['pysflib',
+                    'pecan',
+                    'gerritlib',
+                    'python-ldap',
+                    'requests>=2.2.1',
+                    'passlib',
+                    'basicauth',
+                    'sqlalchemy',
+                    'nose',
+                    'mock',
+                    'urllib3',
+                    'pycrypto',
+                    'htpasswd']
+
+
 setup(
     name='managesf',
     version=VERSION,
@@ -43,6 +58,7 @@ setup(
     entry_points={
         "console_scripts": ['sfmanager = managesf.cli:main']
         },
+    install_requires=INSTALL_REQUIRES,
     url=('http://softwarefactory.enovance.com/'
          'r/gitweb?p=managesf.git;a=summary'),
     download_url='https://github.com/enovance/managesf/tarball/%s' % VERSION,
