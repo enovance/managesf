@@ -28,6 +28,9 @@ except:
 
 VERSION = '0.3.1'
 
+# use requirements.txt to install dependencies
+INSTALL_REQUIRES = []
+
 
 setup(
     name='managesf',
@@ -43,6 +46,7 @@ setup(
     entry_points={
         "console_scripts": ['sfmanager = managesf.cli:main']
         },
+    install_requires=INSTALL_REQUIRES,
     url=('http://softwarefactory.enovance.com/'
          'r/gitweb?p=managesf.git;a=summary'),
     download_url='https://github.com/enovance/managesf/tarball/%s' % VERSION,
