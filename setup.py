@@ -13,12 +13,18 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # -*- coding: utf-8 -*-
+
+import os
+import subprocess
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
     from ez_setup import use_setuptools
     use_setuptools()
     from setuptools import setup, find_packages
+
+from setuptools.command.install import install
 
 try:
     import multiprocessing  # noqa
@@ -27,6 +33,16 @@ except:
 
 
 VERSION = '0.3.1'
+
+
+class PreInstall(install):
+     def run(self):
+        subprocess.check_output(
+            ['sphinx-build',
+             '-b', 'man',
+             os.path.join('docs', 'source'),
+             os.path.join('docs', 'build', 'man')])
+        install.run(self)
 
 
 setup(
@@ -40,6 +56,7 @@ setup(
     zip_safe=False,
     include_package_data=True,
     packages=find_packages(exclude=['ez_setup']),
+    cmdclass={'install': PreInstall},
     entry_points={
         "console_scripts": ['sfmanager = managesf.cli:main']
         },
@@ -47,4 +64,5 @@ setup(
          'r/gitweb?p=managesf.git;a=summary'),
     download_url='https://github.com/enovance/managesf/tarball/%s' % VERSION,
     keywords=['software factory', 'CI', 'continuous integration'],
+    data_files=[('share/man/man1', ['docs/build/man/sfmanager.1'])],
 )
