@@ -13,12 +13,18 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # -*- coding: utf-8 -*-
+
+import os
+import subprocess
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
     from ez_setup import use_setuptools
     use_setuptools()
     from setuptools import setup, find_packages
+
+from setuptools.command.install import install
 
 try:
     import multiprocessing  # noqa
@@ -47,4 +53,5 @@ setup(
          'r/gitweb?p=managesf.git;a=summary'),
     download_url='https://github.com/enovance/managesf/tarball/%s' % VERSION,
     keywords=['software factory', 'CI', 'continuous integration'],
+    data_files=[('share/man/man1', ['docs/build/man/sfmanager.1'])],
 )
