@@ -11,3 +11,4 @@ mock
 urllib3
 pycrypto
 htpasswd
+sphinx
