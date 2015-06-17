@@ -531,7 +531,7 @@ def replication_action(args, base_url, headers):
                     'timeout', 'replicationDelay', 'threads']
         url = '%s/replication' % base_url
         data = {}
-        if args.rep_command != "list":
+        if args.rep_command not in ["list", "get-all"]:
             if getattr(args, 'section'):
                 url = url + '/%s' % args.section
             else:
@@ -542,9 +542,6 @@ def replication_action(args, base_url, headers):
                 logger.error("Invalid setting %s" % args.name)
                 die("Valid settings are " + " , ".join(settings))
             url = url + '/%s' % args.name
-        else:
-            # TODO replace with die() but what is this case ??
-            sys.exit(0)
         if args.rep_command in {'add', 'replace-all', 'rename-section'}:
             if getattr(args, 'value'):
                 data = {'value': args.value}

@@ -65,11 +65,13 @@ class ReplicationController(RestController):
         except Exception as e:
             return report_unhandled_error(e)
 
-    # 'get-all', 'list'
+    # 'get-all'
     @expose()
-    def get(self, section=None, setting=None):
-        if not section:
-            abort(400)
+    def get(self, section, *remainder):
+        if remainder:
+            setting = remainder[0]
+        else:
+            setting = None
         try:
             config = gerrit.replication_get_config(section, setting)
             response.status = 200
@@ -83,6 +85,16 @@ class ReplicationController(RestController):
         inp = request.json if request.content_length else {}
         try:
             gerrit.replication_trigger(inp)
+        except Exception as e:
+            return report_unhandled_error(e)
+
+    # 'list'
+    @expose()
+    def index_GET(self):
+        try:
+            config = gerrit.replication_get_config()
+            response.status = 200
+            return config
         except Exception as e:
             return report_unhandled_error(e)
 
