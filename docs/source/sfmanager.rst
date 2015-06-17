@@ -231,33 +231,63 @@ Delete user
 Remote replication mangement
 ----------------------------
 
-Add a new replication target
-''''''''''''''''''''''''''''
-Creating a new replication configuration requires several steps. These are:
+Gerrit can be configured to push merged changes to another git repository.  This
+can be used to mirror changes on a public available repository, for example on
+Github or to keep another copy as a backup.
 
-replication_config add --section sectionname project projectname
-    Creates a new configuration "sectionname" for the project "projectname"
-replication_config add --section sectionname url gerrit@$hostname:/path/git/projectname.git
-    Set the remote url to "gerrit@$hostname:/path/git/projectname.git"
-trigger_replication --project config
-    Trigger the replication
+Details about the configuration within Gerrit itself can be found online:
+https://gerrit.googlesource.com/gerrit/+/stable-2.4/Documentation/config-replication.txt
+
+
+Add a replication config setting
+''''''''''''''''''''''''''''''''
+
+The minimum requirement is to set a remote git url. Every replication target
+requires it's own section within Gerrits configuration file, thus you need to
+set a sectionname for each replication target.
+
+There are a few options you can use to customize the replication settings:
+
+replication_config add --section sectionname url 'gerrit@$hostname:/path/git/${name}.git'
+    Set the remote url. The variable "${name}" will be replaced by the
+    projectname and can be used if multiple projects will be replicated by this
+    configuration.
+    Can be specified multiple times to replicate to several hosts. In this case
+    the option "threads" might be used to configure Gerrit to replicate in
+    parallel.
+
+replication_config add --section sectionname projects project1,project2
+    Limits the replication to the previously defined url to projects "project1,
+    project2". Note that there is no space between the project names.
+
+replication_config add --section sectionname push "+refs/heads/*:refs/heads/*"
+    refspec denoting what should be replicated. Can be specified multiple times.
 
 Example:
 
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section sectionname project projectname
+           replication_config add --section sectionname url 'gerrit@$hostname:/path/git/${name}.git'
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section sectionname url gerrit@$hostname:/path/git/projectname.git
+           replication_config add --section sectionname project projectname
+
+
+Trigger replication manually
+''''''''''''''''''''''''''''
+
+Replication is triggered automatically by default, though Gerrit delays this a
+little bit (15 seconds by default) to batch multiple commits into a single push operation.
+
+.. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
            trigger_replication --project config
 
 
-List existing replication config
-''''''''''''''''''''''''''''''''
+List existing replication configs and settings
+''''''''''''''''''''''''''''''''''''''''''''''
 
 .. code-block:: bash
 
@@ -275,6 +305,14 @@ does not remove data on the remote side.
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
            remove-section sectionname
+
+Modify existing settings
+''''''''''''''''''''''''
+
+.. code-block:: bash
+
+ sfmanager --url <http://sfgateway.dom> --auth user:password \
+           replication_config replace-all --section sectionname projects project1,project3
 
 
 Backup and restore
