@@ -520,8 +520,8 @@ def replication_read_config():
     config = {}
     for line in lines:
         setting, value = line.split("=")
-        section = setting.split(".")[0]
-        setting = setting.split(".")[1]
+        section = setting.split(".")[1]
+        setting = setting.split(".")[2]
         if setting == 'projects':
             if (len(value.split()) != 1):
                 logger.info("[gerrit] Invalid Replication config file.")
@@ -605,7 +605,9 @@ def replication_get_config(section=None, setting=None):
         logger.info("[gerrit] User GET request: %s %s" % (section, setting))
         if (section in config) and (setting in config[section]):
             userConfig[setting] = config[section][setting]
-    else:
+    if section and not setting:
+        userConfig = config[section]
+    if not section:
         # Return the authorized sections for the user
         logger.info("[gerrit] User GET request for all sections")
         for _section in config:
@@ -614,7 +616,7 @@ def replication_get_config(section=None, setting=None):
                     userConfig[_section] = config[_section]
                     break
     logger.info("[gerrit] Config for user: %s" % str(userConfig))
-    return userConfig
+    return str(userConfig)
 
 
 def replication_trigger(json):
