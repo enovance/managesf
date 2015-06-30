@@ -373,6 +373,21 @@ The corresponding Gerrit replication can be created using the following URLs:
            replication_config add --section secondrepo projects projectname2
 
 
+You can use sfmanager also to add or remove SSH keys to Gerrit. For example::
+
+ ssh-keygen -f private_ssh.key
+
+ sfmanager --url http://managesf.tests.dom \
+     --auth http://managesf.tests.dom \
+     --auth user1:userpass \
+     gerrit_ssh_config add --alias aliasname --key private_ssh.key --hostname sample.github.com
+
+ sfmanager --url http://managesf.tests.dom \
+     --auth http://managesf.tests.dom \
+     --auth user1:userpass \
+     gerrit_ssh_config delete --alias sample
+
+
 Backup and restore
 ------------------
 
