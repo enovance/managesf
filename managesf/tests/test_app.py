@@ -39,7 +39,8 @@ class FunctionalTest(TestCase):
                        'admin': c.admin,
                        'sqlalchemy': c.sqlalchemy,
                        'auth': c.auth,
-                       'htpasswd': c.htpasswd}
+                       'htpasswd': c.htpasswd,
+                       'sshconfig': c.sshconfig}
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
         # 'logging': c.logging}
@@ -561,3 +562,61 @@ class TestManageSFHtpasswdController(FunctionalTest):
 
         resp = self.app.delete('/htpasswd/', extra_environ=env, status="*")
         self.assertEqual(resp.status_int, 406)
+
+
+class TestManageSFSSHConfigController(FunctionalTest):
+    def setUp(self, *args, **kwargs):
+        super(TestManageSFSSHConfigController, self).setUp(*args, **kwargs)
+        self.adminenv = {'REMOTE_USER': self.config['admin']['name']}
+        self.sample_config = {
+            'hostname': 'Hostname',
+            'identityfile_content': 'TheActualKeyOfTheHost',
+            'userknownhostsfile': 'UserKnownHostsFile',
+            'preferredauthentications': 'PreferredAuthentications',
+            'stricthostkeychecking': 'StrictHostKeyChecking',
+            'username': 'Username'
+        }
+        self.reference = """Host "firsthost"
+    Hostname Hostname
+    IdentityFile firsthost.key
+    PreferredAuthentications PreferredAuthentications
+    StrictHostKeyChecking StrictHostKeyChecking
+    UserKnownHostsFile UserKnownHostsFile
+    Username Username
+
+"""
+        with open(self.config['sshconfig']['filename'], "w") as outf:
+            outf.write(self.reference)
+
+    def test_unauthenticated(self):
+        resp = self.app.put_json('/sshconfig/', {}, status="*")
+        self.assertEqual(resp.status_int, 403)
+
+        resp = self.app.get('/sshconfig/name/', {}, status="*")
+        self.assertEqual(resp.status_int, 403)
+
+        resp = self.app.delete('/sshconfig/', {}, status="*")
+        self.assertEqual(resp.status_int, 403)
+
+    def test_add_entry(self):
+        resp = self.app.put_json('/sshconfig/secondhost', self.sample_config,
+                                 extra_environ=self.adminenv, status="*")
+
+        self.assertEqual(resp.status_int, 201)
+
+        with open(self.config['sshconfig']['filename']) as inf:
+            content = inf.read()
+
+        secondhost = self.reference.replace("firsthost", "secondhost")
+        reference = secondhost + self.reference
+        self.assertEqual(reference, content)
+
+    def test_delete_entry(self):
+        resp = self.app.delete('/sshconfig/firsthost',
+                               extra_environ=self.adminenv, status="*")
+
+        self.assertEqual(resp.status_int, 204)
+
+        with open(self.config['sshconfig']['filename']) as inf:
+            content = inf.read()
+        self.assertEqual("", content)
