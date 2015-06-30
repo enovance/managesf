@@ -9,6 +9,7 @@ sqlalchemy
 nose
 mock
 urllib3
+paramiko
 pycrypto
 htpasswd
 pygerrit
