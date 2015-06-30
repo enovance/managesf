@@ -339,8 +339,8 @@ keys, thus they need to be defined first.
 Some replication sites don't allow to re-use a single SSH key for authentication
 with different repositories, for example Github. In that case you can define
 multiple different SSH keys, and instead of directly using a hostname you only
-define an alias for the "Host" value. The SSH keys have to be created on the
-Gerrit node or need to be copied there.
+define an alias for the "Host" value. The SSH keys have to be copied to the
+Gerrit node in advance.
 
 An example setting for an alias host might look like this:
 
@@ -371,6 +371,19 @@ The corresponding Gerrit replication can be created using the following URLs:
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
            replication_config add --section secondrepo projects projectname2
+
+
+You can use sfmanager also to add or remove SSH keys to Gerrit. For example::
+
+ ssh-keygen -N "" -f private_ssh.key
+
+ sfmanager --url <http://sfgateway.dom> \
+     --auth user1:userpass \
+     gerrit_ssh_config add --alias aliasname --key private_ssh.key --hostname sample.github.com
+
+ sfmanager --url <http://sfgateway.dom> \
+     --auth user1:userpass \
+     gerrit_ssh_config delete --alias sample
 
 
 Backup and restore
