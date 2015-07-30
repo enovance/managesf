@@ -371,6 +371,8 @@ class TestGerritController(TestCase):
             self.assertDictEqual(exp_ret, config)
             file(self.conf.gerrit['replication_config_path'], 'w').\
                 write(repl_content_buggy)
+            with open(self.conf.gerrit['replication_config_path']) as debugfile:
+                print debugfile.read()
             self.assertRaises(exc.HTTPServerError,
                               lambda: gerrit.replication_read_config())
 
