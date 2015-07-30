@@ -14,6 +14,8 @@
 # under the License.
 # -*- coding: utf-8 -*-
 
+# boop!
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
