@@ -17,7 +17,7 @@ import json
 from tempfile import mkstemp
 
 from unittest import TestCase
-from mock import patch, MagicMock
+from mock import patch, MagicMock, mock_open
 
 from managesf import cli
 
@@ -65,13 +65,27 @@ class TestProjectUserAction(BaseFunctionalTest):
     def test_create_project(self):
         args = self.default_args
         args += 'project create --name proj1'.split()
-        expected_url = self.base_url + '/project/proj1'
+        expected_url = self.base_url + 'project/proj1/'
         self.assert_secure('put', args, cli.project_action, expected_url)
+
+    def test_create_private_project(self):
+        args = self.default_args
+        args += 'project create --name p1 --private'.split()
+        expected_url = self.base_url + 'project/p1/'
+        data = {'private': True}
+        self.assert_secure('put', args, cli.project_action, expected_url, data)
+
+    def test_create_project_with_groups(self):
+        args = self.default_args
+        args += 'project create --name p2 --core-group u1,u2,u3'.split()
+        expected_url = self.base_url + 'project/p2/'
+        data = {'core-group-members': ['u1', 'u2', 'u3']}
+        self.assert_secure('put', args, cli.project_action, expected_url, data)
 
     def test_delete_project(self):
         args = self.default_args
         args += 'project delete --name proj1'.split()
-        expected_url = self.base_url + '/project/proj1'
+        expected_url = self.base_url + 'project/proj1/'
         self.assert_secure('delete', args, cli.project_action, expected_url)
 
 
@@ -94,16 +108,30 @@ class TestTestsActions(BaseFunctionalTest):
 class TestMembershipAction(BaseFunctionalTest):
     def test_project_add_user_to_groups(self):
         args = self.default_args
-        cmd = 'membership add --user u --project p --groups dev-group'.split()
-        args += cmd
+        cmd = 'membership add --user u --project p --groups dev-group,ptl-group'
+        args += cmd.split()
         expected_url = self.base_url + 'project/membership/p/u/'
-        self.assert_secure('post', args, cli.membership_action, expected_url,
-                           {'groups': ['dev-group']})
+        self.assert_secure('put', args, cli.membership_action, expected_url,
+                           {'groups': ['dev-group', 'ptl-group']})
+
+        cmd = 'membership add --user u --project p --groups dev-group ptl-group'
+        args += cmd.split()
+        expected_url = self.base_url + 'project/membership/p/u/'
+        self.assert_secure('put', args, cli.membership_action, expected_url,
+                           {'groups': ['dev-group', 'ptl-group']})
 
     def test_project_remove_user_from_all_groups(self):
         args = self.default_args
         args += 'membership remove --user user1 --project proj1'.split()
         expected_url = self.base_url + 'project/membership/proj1/user1/'
+        self.assert_secure('delete', args, cli.membership_action,
+                           expected_url)
+
+    def test_project_remove_user_from_group(self):
+        args = self.default_args
+        cmd = 'membership remove --user u1 --project proj1 --group dev-group'
+        args += cmd.split()
+        expected_url = self.base_url + 'project/membership/proj1/u1/dev-group/'
         self.assert_secure('delete', args, cli.membership_action,
                            expected_url)
 
@@ -224,10 +252,51 @@ class TestSystemActions(BaseFunctionalTest):
                                                       self.headers))
                     method.assert_called_with(expected_url, **params)
 
-    def test_old_configure(self):
+
+class TestGerrit(BaseFunctionalTest):
+    def test_generate_htpasswd(self):
         args = self.default_args
-        cmd = 'replication_config add --section mysql_config projects config'
-        args += cmd.split()
-        excepted_url = self.base_url + 'replication/mysql_config/projects/'
-        self.assert_secure('put', args, cli.replication_action, excepted_url,
-                           {'value': 'config'})
+        args += 'gerrit generate_password'.split()
+        expected_url = self.base_url + 'htpasswd/'
+        self.assert_secure('put', args, cli.gerrit_api_htpasswd_action,
+                           expected_url)
+
+    def test_remove_htpasswd(self):
+        args = self.default_args
+        args += 'gerrit delete_password'.split()
+        expected_url = self.base_url + 'htpasswd/'
+        self.assert_secure('delete', args, cli.gerrit_api_htpasswd_action,
+                           expected_url)
+
+    def test_add_ssh_config(self):
+        args = self.default_args
+        x = 'gerrit add_sshkey --alias u1 --hostname localhost --keyfile k.pub'
+        args += x.split()
+        expected_url = self.base_url + 'sshconfig/u1/'
+
+        with patch('managesf.cli.get_cookie') as c:
+            c.return_value = 'fake_cookie'
+            test_mock = 'managesf.cli.open'
+            with patch(test_mock, mock_open(read_data='tt'), create=True):
+                with patch('requests.put') as method:
+                    method.return_value = FakeResponse()
+                    parsed = self.parser.parse_args(args)
+                    params = {'headers': self.headers, 'cookies': self.cookies}
+                    params['data'] = json.dumps({
+                        "hostname": "localhost",
+                        "userknownHostsfile": "/dev/null",
+                        "preferredauthentications": "publickey",
+                        "stricthostkeychecking": "no",
+                        "identityfile_content": "tt"
+                    })
+                    self.assertTrue(cli.gerrit_ssh_config_action(parsed,
+                                                                 self.base_url,
+                                                                 self.headers))
+                    method.assert_called_with(expected_url, **params)
+
+    def test_remove_ssh_config(self):
+        args = self.default_args
+        args += 'gerrit delete_sshkey --alias u3'.split()
+        expected_url = self.base_url + 'sshconfig/u3/'
+        self.assert_secure('delete', args, cli.gerrit_ssh_config_action,
+                           expected_url)
