@@ -260,34 +260,13 @@ def gerrit_api_htpasswd(sp):
 
 
 def gerrit_ssh_config(sp):
-    add_config = sp.add_parser('add')
-    add_config.add_argument('--alias', nargs='?', required=True)
-    add_config.add_argument('--hostname', nargs='?', required=True)
-    add_config.add_argument('--keyfile', nargs='?', required=True)
+    add_config = sp.add_parser('add_sshkey')
+    add_config.add_argument('--alias', required=True)
+    add_config.add_argument('--hostname', required=True)
+    add_config.add_argument('--keyfile', required=True)
 
-    delete_config = sp.add_parser('delete')
-    delete_config.add_argument('--alias', nargs='?', required=True)
-
-
-def project_user_command(sp):
-    dup = sp.add_parser('delete_user')
-    dup.add_argument('--name', '-n', nargs='?', metavar='project-name',
-                     required=True)
-    dup.add_argument('--user', '-u', nargs='?', metavar='user-name',
-                     required=True)
-    dup.add_argument('--group', '-g', nargs='?', metavar='group-name')
-
-    aup = sp.add_parser('add_user')
-    aup.add_argument('--name', '-n', nargs='?', metavar='project-name',
-                     required=True)
-    aup.add_argument('--user', '-u', nargs='?', metavar='user-name',
-                     required=True)
-    aup.add_argument('--groups', '-p', nargs='?', metavar='ptl-group-members',
-                     help='group names serarated by comma, allowed group names'
-                     ' are core-group, dev-group, ptl-group',
-                     required=True)
-
-    sp.add_parser('list_active_users', help='Print a list of active users')
+    delete_config = sp.add_parser('delete_sshkey')
+    delete_config.add_argument('--alias', required=True)
 
 
 def user_management_command(sp):
@@ -364,62 +343,6 @@ def tests_command(parser):
                       required=True)
 
 
-def section_command(sp):
-    rp = sp.add_parser('replication_config')
-    rps = rp.add_subparsers(dest="rep_command")
-
-    rps.add_parser('list', help='List the sections and its content accessible'
-                   ' to this user')
-
-    repa = rps.add_parser('add', help='Add a setting value to the section')
-    repa.add_argument('--section', nargs='?', required=True,
-                      help='section to which this setting belongs to')
-    repa.add_argument('name', metavar='name', nargs='?',
-                      help='Setting name. Supported settings - project, url')
-    repa.add_argument('value', nargs='?', help='Value of the setting')
-
-    repg = rps.add_parser('get-all',
-                          help='Get all the values of a section setting')
-    repg.add_argument('--section', nargs='?', required=True,
-                      help='section to which this setting belongs to')
-    repg.add_argument('name', metavar='name', nargs='?',
-                      help='Setting name. Supported settings - project, url')
-
-    repu = rps.add_parser('unset-all',
-                          help='Remove the setting from the section')
-    repu.add_argument('--section', nargs='?', required=True,
-                      help='section to which this setting belongs to')
-    settings = 'projects, url, push, receivepack, uploadpack, timeout,'
-    settings = settings + ' replicationDelay, threads'
-    repu.add_argument('name', metavar='name', nargs='?',
-                      help='Setting name. Supported settings - ' + settings)
-
-    repr = rps.add_parser('replace-all',
-                          help='replaces all the current values with '
-                          'the given value for a setting')
-    repr.add_argument('--section', nargs='?', required=True,
-                      help='section to which this setting belongs to')
-    repr.add_argument('name', metavar='name', nargs='?',
-                      help='Setting name. Supported settings - project, url')
-    repr.add_argument('value', nargs='?', help='Value of the setting')
-
-    reprn = rps.add_parser('rename', help='Rename the section')
-    reprn.add_argument('--section', nargs='?', required=True,
-                       help='old section name')
-    reprn.add_argument('name', nargs='?', help='new section name')
-
-    reprm = rps.add_parser('remove', help='Remove the section')
-    reprm.add_argument('--section', nargs='?', required=True,
-                       help='section to be removed')
-
-
-def trigger_command(sp):
-    trp = sp.add_parser('trigger_replication')
-    trp.add_argument('--wait', default=False, action='store_true')
-    trp.add_argument('--project', '-p', metavar='project-name')
-    trp.add_argument('--url', metavar='repo-url')
-
-
 def command_options(parser):
     sp = parser.add_subparsers(dest="command")
     project_commands = sp.add_parser('project',
@@ -428,24 +351,16 @@ def command_options(parser):
     user_commands = sp.add_parser('user',
                                   help='project users-related commands')
     suc = user_commands.add_subparsers(dest="subcommand")
-    gerrit_api_commands = sp.add_parser('gerrit_api_htpasswd',
-                                        help='Gerrit API access commands')
-    gic = gerrit_api_commands.add_subparsers(dest="subcommand")
-    gerrit_ssh_commands = sp.add_parser('gerrit_ssh_config',
-                                        help='Gerrit SSH config commands')
-    gsc = gerrit_ssh_commands.add_subparsers(dest="subcommand")
+    gerrit_api = sp.add_parser('gerrit',
+                               help='Gerrit API access commands')
+    gic = gerrit_api.add_subparsers(dest="subcommand")
+
     backup_command(sp)
     restore_command(sp)
     gerrit_api_htpasswd(gic)
-    gerrit_ssh_config(gsc)
-    project_user_command(spc)
+    gerrit_ssh_config(gic)
     project_command(spc)
     user_management_command(suc)
-    # for compatibility purpose, until calls in SF are modified
-    project_user_command(sp)
-    project_command(sp)
-    section_command(sp)
-    trigger_command(sp)
 
     # New options
     membership_command(sp)
@@ -453,10 +368,21 @@ def command_options(parser):
     replication_command(sp)
     tests_command(sp)
 
+    # old commands
+    gerrit_api_commands = sp.add_parser('gerrit_api_htpasswd',
+                                        help='Gerrit API access commands')
+    gic = gerrit_api_commands.add_subparsers(dest="subcommand")
+    gerrit_api_htpasswd(gic)
+    gerrit_ssh_commands = sp.add_parser('gerrit_ssh_config',
+                                        help='Gerrit SSH config commands')
+    gsc = gerrit_ssh_commands.add_subparsers(dest="subcommand")
+    gerrit_ssh_config(gsc)
+
 
 def get_cookie(args):
-    if args.cookie is not None:
+    if getattr(args, 'cookie'):
         return args.cookie
+
     url_stripper = re.compile('http[s]?://(.+)')
     use_ssl = False
     try:
@@ -507,73 +433,32 @@ def membership_action(args, base_url, headers):
     if args.subcommand == 'list':
         logger.info('List users assigned to projects')
         url = build_url(base_url, 'project/membership')
-        return requests.get(url, headers=headers, cookies=auth_cookie)
+        resp = requests.get(url, headers=headers, cookies=auth_cookie)
+        return response(resp)
 
     url = build_url(base_url, 'project/membership', args.project, args.user)
     if args.subcommand == 'add':
         logger.info('Add member %s to project %s', args.user, args.project)
         if args.groups:
             data = json.dumps({'groups': args.groups})
-        return requests.post(url, headers=headers, data=data,
-                             cookies=auth_cookie)
+        resp = requests.put(url, headers=headers, data=data,
+                            cookies=auth_cookie)
+        return response(resp)
 
     if args.subcommand == 'remove':
         logger.info('Remove member %s from project %s', args.user,
                     args.project)
-        return requests.delete(url, headers=headers, cookies=auth_cookie)
-
-
-def project_user_action(args, base_url, headers):
-    if args.command in ['add_user', 'delete_user', 'list_active_users']:
-        subcommand = args.command
-        logger.info("Deprecated syntax, "
-                    "please use project %s ..." % subcommand)
-    elif args.command == 'project':
-        subcommand = args.subcommand
-    else:
-        return False
-
-    if subcommand in ['add_user', 'delete_user']:
-        url = "{}/project/membership/{}/{}/".format(base_url, args.name,
-                                                    args.user)
-    elif subcommand == 'list_active_users':
-        url = base_url + '/project/membership/'
-    if subcommand == 'add_user':
-        groups = split_and_strip(args.groups)
-        data = json.dumps({'groups': groups})
-        resp = requests.put(url, headers=headers, data=data,
-                            cookies=dict(auth_pubtkt=get_cookie(args)))
-
-    elif subcommand == 'delete_user':
-        # if a group name is provided, delete user from that group,
-        # otherwise delete user from all groups
-        if args.group:
-            url = url + args.group
-        resp = requests.delete(url, headers=headers,
-                               cookies=dict(auth_pubtkt=get_cookie(args)))
-
-    elif subcommand == 'list_active_users':
-        resp = requests.get(url, headers=headers,
-                            cookies=dict(auth_pubtkt=get_cookie(args)))
-
-    else:
-        return False
-
-    return response(resp)
+        resp = requests.delete(url, headers=headers, cookies=auth_cookie)
+        return response(resp)
 
 
 def project_action(args, base_url, headers):
-    if args.command in ['delete', 'create']:
-        subcommand = args.command
-        logger.info("Deprecated syntax, "
-                    "please use project %s ..." % subcommand)
-    elif args.command == 'project':
-        subcommand = args.subcommand
-    else:
+    if args.command != 'project' and \
+       args.subcommand not in ['delete', 'create']:
         return False
 
-    url = base_url + "/project/%s" % args.name
-    if subcommand == 'create':
+    url = build_url(base_url, 'project', args.name)
+    if args.subcommand == 'create':
         if getattr(args, 'core_group'):
             args.core_group = split_and_strip(args.core_group)
         if getattr(args, 'ptl_group'):
@@ -603,7 +488,7 @@ def project_action(args, base_url, headers):
 
         resp = requests.put(url, **params)
 
-    elif subcommand == 'delete':
+    elif args.subcommand == 'delete':
         resp = requests.delete(url, headers=headers,
                                cookies=dict(auth_pubtkt=get_cookie(args)))
     else:
@@ -632,19 +517,16 @@ def tests_action(args, base_url, headers):
 
 
 def backup_action(args, base_url, headers):
-    if args.command not in ['system', 'backup_get', 'backup_start',
-                            'restore']:
+    if args.command != 'system' and \
+       args.subcommand not in ['backup_get', 'backup_start',
+                               'restore']:
         return False
 
-    if args.command in ['backup_get', 'backup_start', 'restore']:
-        logger.info('Depreacated syntax: Please use the system command')
-        subcommand = args.command
-    else:
-        subcommand = args.subcommand
-
+    subcommand = args.subcommand
     url = build_url(base_url, 'backup')
     params = {'headers': headers,
               'cookies': dict(auth_pubtkt=get_cookie(args))}
+
     if subcommand == 'backup_get':
         resp = requests.get(url, **params)
         if resp.status_code != 200:
@@ -673,39 +555,30 @@ def backup_action(args, base_url, headers):
 
 
 def gerrit_api_htpasswd_action(args, base_url, headers):
-    url = base_url + '/htpasswd'
-    if not getattr(args, 'subcommand', None):
-        return False
-    if args.subcommand not in ['generate_password', 'delete_password']:
+    url = build_url(base_url, 'htpasswd')
+    if args.command != 'gerrit' and \
+       args.subcommand not in ['generate_password', 'delete_password']:
         return False
 
     if args.subcommand == 'generate_password':
         resp = requests.put(url, headers=headers,
                             cookies=dict(auth_pubtkt=get_cookie(args)))
-        if resp.status_code != 201:
-            die("generate_password failed with status_code " +
-                str(resp.status_code))
+        return response(resp)
     elif args.subcommand == 'delete_password':
         resp = requests.delete(url, headers=headers,
                                cookies=dict(auth_pubtkt=get_cookie(args)))
-        if resp.status_code != 204:
-            die("delete_password failed with status_code " +
-                str(resp.status_code))
-    return response(resp)
+        return response(resp)
+    return False
 
 
 def gerrit_ssh_config_action(args, base_url, headers):
-    url = base_url + '/sshconfig'
-    if args.command not in ['gerrit', 'gerrit_ssh_config']:
-        return False
-    if not getattr(args, 'subcommand', None):
-        return False
-    if args.subcommand not in ['add', 'delete']:
+    if args.command != 'gerrit' and \
+       args.subcommand not in ['add_sshkey', 'delete_sshkey']:
         return False
 
-    url += '/' + args.alias
+    url = build_url(base_url, 'sshconfig', args.alias)
 
-    if args.subcommand == 'add':
+    if args.subcommand == 'add_sshkey':
         data = {
             "hostname": args.hostname,
             "userknownHostsfile": "/dev/null",
@@ -717,30 +590,24 @@ def gerrit_ssh_config_action(args, base_url, headers):
             data["identityfile_content"] = ssh_key_file.read()
         resp = requests.put(url, headers=headers, data=json.dumps(data),
                             cookies=dict(auth_pubtkt=get_cookie(args)))
-        if resp.status_code != 201:
-            die("add ssh config failed with status_code " +
-                str(resp.status_code))
-    elif args.subcommand == 'delete':
+        return response(resp)
+
+    if args.subcommand == 'delete_sshkey':
         resp = requests.delete(url, headers=headers,
                                cookies=dict(auth_pubtkt=get_cookie(args)))
-        if resp.status_code != 204:
-            die("remove ssh config failed with status_code " +
-                str(resp.status_code))
-    return response(resp)
+        return response(resp)
+
+    return False
 
 
 def replication_action(args, base_url, headers):
-    if args.command not in ['replication_config', 'trigger_replication',
-                            'replication']:
+    if args.command != 'replication' and \
+       args.subcommand not in ['configure', 'trigger']:
         return False
 
-    if args.command in ['replication_config', 'trigger_replication']:
-        logger.info('Deprecated syntax, please use at the replication command')
-        subcommand = args.command
-    else:
-        subcommand = args.subcommand
+    subcommand = args.subcommand
 
-    if subcommand in ['replication_config', 'configure']:
+    if subcommand == 'configure':
         headers['Content-Type'] = 'application/json'
         settings = ['projects', 'url', 'push', 'receivepack', 'uploadpack',
                     'timeout', 'replicationDelay', 'threads']
@@ -811,7 +678,7 @@ def replication_action(args, base_url, headers):
                 return True
         return response(resp)
 
-    elif subcommand in ['trigger_replication', 'trigger']:
+    elif subcommand == 'trigger':
         headers['Content-Type'] = 'application/json'
         url = build_url(base_url, 'replication')
         info = {}
@@ -925,8 +792,7 @@ def main():
     if args.insecure:
         import urllib3
         urllib3.disable_warnings()
-    if not(project_user_action(args, base_url, headers) or
-           project_action(args, base_url, headers) or
+    if not(project_action(args, base_url, headers) or
            backup_action(args, base_url, headers) or
            gerrit_api_htpasswd_action(args, base_url, headers) or
            replication_action(args, base_url, headers) or
