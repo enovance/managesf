@@ -182,10 +182,12 @@ class TestManageSFAppLocaluserController(FunctionalTest):
 class TestManageSFAppProjectController(FunctionalTest):
 
     def test_project_get_all(self):
+        from managesf.services.redmine import SoftwareFactoryRedmine
         ctx = [patch('managesf.controllers.gerrit.get_projects'),
                patch('managesf.controllers.gerrit.get_projects_by_user'),
                patch('managesf.controllers.gerrit.get_open_changes'),
-               patch('managesf.controllers.redminec.get_open_issues'),
+               patch.object(SoftwareFactoryRedmine,
+                            'get_open_issues'),
                patch('managesf.controllers.gerrit.get_project_groups')]
         with nested(*ctx) as (gp, gpu, goc, goi, gpg):
             gp.return_value = ['p0', 'p1', ]
@@ -241,28 +243,34 @@ class TestManageSFAppProjectController(FunctionalTest):
             response = self.app.put('/project/p1', status="*")
             self.assertEqual(response.status_int, 401)
         # Create a project with name
+        from managesf.services.redmine.project import SFRedmineProjectManager
         ctx = [patch('managesf.controllers.gerrit.init_project'),
                patch('managesf.controllers.gerrit.user_is_administrator'),
-               patch('managesf.controllers.redminec.init_project')]
+               patch.object(SFRedmineProjectManager,
+                            'create')]
         with nested(*ctx) as (gip, gia, rip):
-            response = self.app.put('/project/p1', status="*")
+            response = self.app.put('/project/p1', status="*",
+                                    extra_environ={'REMOTE_USER': 'bob'})
             self.assertTupleEqual(('p1', {}), gip.mock_calls[0][1])
-            self.assertTupleEqual(('p1', {}), rip.mock_calls[0][1])
+            self.assertTupleEqual(('p1', 'bob', {}), rip.mock_calls[0][1])
             self.assertEqual(response.status_int, 201)
             self.assertEqual(response.body, 'Project p1 has been created.')
         # Create a project with name - an error occurs
         ctx = [patch('managesf.controllers.gerrit.init_project'),
                patch('managesf.controllers.gerrit.user_is_administrator'),
-               patch('managesf.controllers.redminec.init_project',
-               side_effect=raiseexc)]
+               patch.object(SFRedmineProjectManager,
+                            'create',
+                            side_effect=raiseexc)]
         with nested(*ctx) as (gip, gia, rip):
-            response = self.app.put('/project/p1', status="*")
+            response = self.app.put('/project/p1', status="*",
+                                    extra_environ={'REMOTE_USER': 'bob'})
             self.assertEqual(response.status_int, 500)
             self.assertEqual(response.body,
                              'Unable to process your request, failed '
                              'with unhandled error (server side): FakeExcMsg')
 
     def test_project_delete(self):
+        from managesf.services.redmine.project import SFRedmineProjectManager
         # Delete a project with no name
         response = self.app.delete('/project/', status="*")
         self.assertEqual(response.status_int, 400)
@@ -271,16 +279,17 @@ class TestManageSFAppProjectController(FunctionalTest):
         self.assertEqual(response.status_int, 400)
         # Delete a project with name
         ctx = [patch('managesf.controllers.gerrit.delete_project'),
-               patch('managesf.controllers.redminec.delete_project')]
+               patch.object(SFRedmineProjectManager, 'delete')]
         with nested(*ctx) as (gdp, rdp):
-            response = self.app.delete('/project/p1', status="*")
+            response = self.app.delete('/project/p1', status="*",
+                                       extra_environ={'REMOTE_USER': 'testy'})
             self.assertTupleEqual(('p1',), gdp.mock_calls[0][1])
-            self.assertTupleEqual(('p1',), rdp.mock_calls[0][1])
+            self.assertTupleEqual(('p1', 'testy'), rdp.mock_calls[0][1])
             self.assertEqual(response.status_int, 200)
             self.assertEqual(response.body, 'Project p1 has been deleted.')
         # Delete a project with name - an error occurs
         ctx = [patch('managesf.controllers.gerrit.delete_project'),
-               patch('managesf.controllers.redminec.delete_project',
+               patch.object(SFRedmineProjectManager, 'delete',
                side_effect=raiseexc)]
         with nested(*ctx) as (gip, rip):
             response = self.app.delete('/project/p1', status="*")
@@ -354,7 +363,9 @@ class TestManageSFAppBackupController(FunctionalTest):
 
 class TestManageSFAppMembershipController(FunctionalTest):
     def test_get_all_users(self):
-        with patch('managesf.controllers.redminec.get_active_users') as au:
+        from managesf.services.redmine import SoftwareFactoryRedmine
+        with patch.object(SoftwareFactoryRedmine,
+                          'get_active_users') as au:
             au.return_value = [[1, "a"], [2, "b"]]
             response = self.app.get('/project/membership/', status="*")
             self.assertEqual(200, response.status_int)
@@ -371,9 +382,10 @@ class TestManageSFAppMembershipController(FunctionalTest):
         self.assertEqual(response.status_int, 400)
 
     def test_put(self):
+        from managesf.services.redmine import membership
         ctx = [patch('managesf.controllers.gerrit.add_user_to_projectgroups'),
-               patch(
-                   'managesf.controllers.redminec.add_user_to_projectgroups')]
+               patch.object(membership.SFRedmineMembershipManager,
+                            'create')]
         with nested(*ctx) as (gaupg, raupg):
             response = self.app.put_json(
                 '/project/p1/membership/john@tests.dom',
@@ -385,8 +397,9 @@ class TestManageSFAppMembershipController(FunctionalTest):
                 "core-group for project p1",
                 response.body)
         ctx = [patch('managesf.controllers.gerrit.add_user_to_projectgroups'),
-               patch('managesf.controllers.redminec.add_user_to_projectgroups',
-               side_effect=raiseexc)]
+               patch.object(membership.SFRedmineMembershipManager,
+                            'create',
+                            side_effect=raiseexc)]
         with nested(*ctx) as (gaupg, raupg):
             response = self.app.put_json(
                 '/project/p1/membership/john@tests.dom',
@@ -398,14 +411,14 @@ class TestManageSFAppMembershipController(FunctionalTest):
                              'with unhandled error (server side): FakeExcMsg')
 
     def test_delete(self):
+        from managesf.services.redmine import membership
         response = self.app.delete('/project/p1/membership/john', status="*")
         self.assertEqual(response.status_int, 400)
         ctx = [
             patch(
                 'managesf.controllers.gerrit.delete_user_from_projectgroups'),
-            patch(
-                'managesf.controllers.redminec.'
-                'delete_user_from_projectgroups')]
+            patch.object(membership.SFRedmineMembershipManager,
+                         'delete')]
         with nested(*ctx) as (gdupg, rdupg):
             response = self.app.delete(
                 '/project/p1/membership/john',
@@ -433,9 +446,9 @@ class TestManageSFAppMembershipController(FunctionalTest):
         ctx = [
             patch(
                 'managesf.controllers.gerrit.delete_user_from_projectgroups'),
-            patch(
-                'managesf.controllers.redminec.delete_user_from_projectgroups',
-                side_effect=raiseexc)]
+            patch.object(membership.SFRedmineMembershipManager,
+                         'delete',
+                         side_effect=raiseexc)]
         with nested(*ctx) as (gdupg, rdupg):
             response = self.app.delete(
                 '/project/p1/membership/john@tests.dom',
