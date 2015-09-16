@@ -49,7 +49,7 @@ class Backup(object):
         self.gru._ssh(cmd)
         self.jru._ssh(cmd)
         self.msqlru._ssh(cmd)
-        gerrit_service = 'wget --spider http://localhost:8080/r/'
+        gerrit_service = 'wget --spider http://localhost:8000/r/'
         self.check_for_service(self.gru, gerrit_service)
         jenkins_service = 'wget --spider http://localhost:8082/jenkins/'
         self.check_for_service(self.jru, jenkins_service)
