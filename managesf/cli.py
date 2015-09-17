@@ -155,20 +155,17 @@ def split_and_strip(s):
 
 def default_arguments(parser):
     parser.add_argument('--url',
-                        help='Softwarefactory public gateway URL',
+                        help='Software Factory public gateway URL',
                         required=True)
     parser.add_argument('--auth', metavar='username[:password]',
-                        help='Authentication information', required=False,
-                        default=None)
+                        help='Authentication information', required=False)
     parser.add_argument('--github-token', metavar='GithubPersonalAccessToken',
                         help='Authenticate with a Github Access Token',
-                        required=False, default=None)
+                        required=False)
     parser.add_argument('--auth-server-url', metavar='central-auth-server',
-                        default=None,
                         help='URL of the central auth server')
     parser.add_argument('--cookie', metavar='Authentication cookie',
-                        help='cookie of the user if known',
-                        default=None)
+                        help='cookie of the user if known')
     parser.add_argument('--insecure', default=False, action='store_true',
                         help='disable SSL certificate verification, '
                         'verification is enabled by default')
@@ -179,31 +176,38 @@ def default_arguments(parser):
 
 def membership_command(parser):
     def membership_args(x):
-        x.add_argument('--project', metavar='project-name', required=True)
-        x.add_argument('--user', metavar='user-name', required=True)
+        x.add_argument('--project', metavar='project-name', required=True,
+                       help='The project name')
+        x.add_argument('--user', metavar='user-name', required=True,
+                       help='The username registered in Software Factory')
 
     root = parser.add_parser('membership',
-                             help='Users associated to a specific project')
+                             help='Users membership to project(s)')
     sub_cmd = root.add_subparsers(dest='subcommand')
-    add = sub_cmd.add_parser('add')
+    add = sub_cmd.add_parser('add', help='Add a user in Software Factory')
     membership_args(add)
     add.add_argument('--groups', nargs='+',
                      metavar='core-group, dev-group, ptl-group')
 
-    remove = sub_cmd.add_parser('remove')
+    remove = sub_cmd.add_parser('remove',
+                                help='Remove a user from Software Factory')
     membership_args(remove)
 
-    sub_cmd.add_parser('list', help='Print a list of active users')
+    sub_cmd.add_parser('list',
+                       help='Print a list of active users in Software Factory')
 
 
 def system_command(parser):
     root = parser.add_parser('system', help='system level commands')
     sub_cmd = root.add_subparsers(dest='subcommand')
-    sub_cmd.add_parser('backup_start')
-    sub_cmd.add_parser('backup_get')
-    restore = sub_cmd.add_parser('restore')
-    restore.add_argument('--filename', metavar='absolute-path',
-                         required=True)
+    sub_cmd.add_parser('backup_start',
+                       help='Start the backup process in Software Factory')
+    sub_cmd.add_parser('backup_get',
+                       help='Download the latest backup from Software Factory')
+    restore = sub_cmd.add_parser('restore',
+                                 help='Restore Software Factory data')
+    restore.add_argument('--filename', metavar='absolute-path', required=True,
+                         help='The file downloaded from backup_get')
 
 
 def replication_command(parser):
@@ -218,37 +222,41 @@ def replication_command(parser):
     root = parser.add_parser('replication', help='System replication commands')
     sub_cmd = root.add_subparsers(dest='subcommand')
 
-    trigger = sub_cmd.add_parser('trigger')
-    trigger.add_argument('--wait', default=False, action='store_true')
+    help = 'Trigger the replication events of a project'
+    trigger = sub_cmd.add_parser('trigger', help=help)
+    trigger.add_argument('--wait', default=False, action='store_true',
+                         help='Place the trigger in a queue')
     trigger.add_argument('--project', '-p', metavar='project-name')
-    trigger.add_argument('--url', metavar='repo-url')
+    trigger.add_argument('--url', metavar='repo-url',
+                         help='The url of the project')
 
-    config = sub_cmd.add_parser('configure')
+    config = sub_cmd.add_parser('configure',
+                                help='Configure the replication system')
     config_sub = config.add_subparsers(dest='rep_command')
-    config_sub.add_parser('list')
+    help = 'List of replication variables settings'
+    config_sub.add_parser('list', help=help)
 
-    get_all = config_sub.add_parser('get-all')
+    get_all = config_sub.add_parser('get-all',
+                                    help='Get all variables for that setting')
     section_args(get_all)
 
-    replace_all = config_sub.add_parser('replace-all')
+    help = 'Replace variable values for all settings'
+    replace_all = config_sub.add_parser('replace-all', help=help)
     section_args(replace_all, True)
 
-    rename = config_sub.add_parser('rename')
+    rename = config_sub.add_parser('rename', help='Rename variable name')
     section_args(rename, True)
 
-    remove = config_sub.add_parser('remove')
+    remove = config_sub.add_parser('remove', help='Remove the variable')
     section_args(remove)
 
-    add = config_sub.add_parser('add')
+    add = config_sub.add_parser('add', help='Set new variable')
     section_args(add, True)
 
 
 def backup_command(sp):
     sp.add_parser('backup_get')
     sp.add_parser('backup_start')
-
-
-def restore_command(sp):
     rst = sp.add_parser('restore')
     rst.add_argument('--filename', '-n', nargs='?', metavar='tarball-name',
                      required=True, help='Tarball used to restore SF')
@@ -260,12 +268,16 @@ def gerrit_api_htpasswd(sp):
 
 
 def gerrit_ssh_config(sp):
-    add_config = sp.add_parser('add')
+    help = 'Add SSH configuration to Software Factory'
+    add_config = sp.add_parser('add', help=help)
+
     add_config.add_argument('--alias', nargs='?', required=True)
     add_config.add_argument('--hostname', nargs='?', required=True)
     add_config.add_argument('--keyfile', nargs='?', required=True)
 
-    delete_config = sp.add_parser('delete')
+    help = 'Remove a SSH alias from Software Factory'
+    delete_config = sp.add_parser('delete', help=help)
+
     delete_config.add_argument('--alias', nargs='?', required=True)
 
 
@@ -327,7 +339,11 @@ def user_management_command(sp):
                       required=True, help='the user to delete')
 
 
-def project_command(sp):
+def project_command(parser):
+    cmd = parser.add_parser('project',
+                            help='project-related commands')
+    sp = cmd.add_subparsers(dest="subcommand")
+
     cp = sp.add_parser('create')
     cp.add_argument('--name', '-n', nargs='?', metavar='project-name',
                     required=True)
@@ -353,7 +369,8 @@ def project_command(sp):
 
 
 def tests_command(parser):
-    tp = parser.add_parser('tests')
+    tp = parser.add_parser('tests',
+                           help="Configure the project's tests settings")
     subc = tp.add_subparsers(dest='subcommand')
     init = subc.add_parser('init',
                            help='Setup the initial tests configuration for'
@@ -422,30 +439,33 @@ def trigger_command(sp):
 
 def command_options(parser):
     sp = parser.add_subparsers(dest="command")
-    project_commands = sp.add_parser('project',
-                                     help='project-related commands')
-    spc = project_commands.add_subparsers(dest="subcommand")
-    user_commands = sp.add_parser('user',
-                                  help='project users-related commands')
-    suc = user_commands.add_subparsers(dest="subcommand")
-    gerrit_api_commands = sp.add_parser('gerrit_api_htpasswd',
-                                        help='Gerrit API access commands')
-    gic = gerrit_api_commands.add_subparsers(dest="subcommand")
-    gerrit_ssh_commands = sp.add_parser('gerrit_ssh_config',
-                                        help='Gerrit SSH config commands')
-    gsc = gerrit_ssh_commands.add_subparsers(dest="subcommand")
-    backup_command(sp)
-    restore_command(sp)
-    gerrit_api_htpasswd(gic)
-    gerrit_ssh_config(gsc)
-    project_user_command(spc)
+    project_cmd = sp.add_parser('project',
+                                help='CI project configuration')
+    spc = project_cmd.add_subparsers(dest="subcommand")
     project_command(spc)
+    project_user_command(spc)
+
+    user_commands = sp.add_parser('user',
+                                  help='project contributors commands')
+    suc = user_commands.add_subparsers(dest="subcommand")
     user_management_command(suc)
+
+    gerrit_api_commands = sp.add_parser('gerrit_api_htpasswd',
+                                        help='API Authentication commands')
+    gic = gerrit_api_commands.add_subparsers(dest="subcommand")
+    gerrit_api_htpasswd(gic)
+
+    gerrit_ssh_commands = sp.add_parser('gerrit_ssh_config',
+                                        help='SSH configuration commands')
+    gsc = gerrit_ssh_commands.add_subparsers(dest="subcommand")
+    gerrit_ssh_config(gsc)
+
     # for compatibility purpose, until calls in SF are modified
     project_user_command(sp)
     project_command(sp)
     section_command(sp)
     trigger_command(sp)
+    backup_command(sp)
 
     # New options
     membership_command(sp)
@@ -534,10 +554,9 @@ def project_user_action(args, base_url, headers):
         return False
 
     if subcommand in ['add_user', 'delete_user']:
-        url = "{}/project/membership/{}/{}/".format(base_url, args.name,
-                                                    args.user)
-    elif subcommand == 'list_active_users':
-        url = base_url + '/project/membership/'
+        url = build_url(base_url, 'project', 'membership', args.name,
+                        args.user)
+
     if subcommand == 'add_user':
         groups = split_and_strip(args.groups)
         data = json.dumps({'groups': groups})
@@ -548,11 +567,12 @@ def project_user_action(args, base_url, headers):
         # if a group name is provided, delete user from that group,
         # otherwise delete user from all groups
         if args.group:
-            url = url + args.group
+            url = build_url(url, args.group)
         resp = requests.delete(url, headers=headers,
                                cookies=dict(auth_pubtkt=get_cookie(args)))
 
     elif subcommand == 'list_active_users':
+        url = build_url(base_url, 'project', 'membership')
         resp = requests.get(url, headers=headers,
                             cookies=dict(auth_pubtkt=get_cookie(args)))
 
@@ -863,8 +883,8 @@ def user_management_action(args, base_url, headers):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Tool to manage software"
-                                     " factory projects")
+    parser = argparse.ArgumentParser(description="Tool to manage Software"
+                                     " Factory projects")
     default_arguments(parser)
     command_options(parser)
     args = parser.parse_args()
