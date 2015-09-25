@@ -318,25 +318,17 @@ class TestManageSFAppRestoreController(FunctionalTest):
 
 class TestManageSFAppBackupController(FunctionalTest):
     def tearDown(self):
-        if os.path.isfile('/tmp/sf_backup.tar.gz'):
-            os.unlink('/tmp/sf_backup.tar.gz')
+        if os.path.isfile('/var/www/managesf/sf_backup.tar.gz'):
+            os.unlink('/var/www/managesf/sf_backup.tar.gz')
 
     def test_backup_get(self):
         with patch('managesf.controllers.backup.backup_get') as bg:
-            file('/tmp/sf_backup.tar.gz', 'w').write('backup content')
+            file('/var/www/managesf/sf_backup.tar.gz', 'w').write('backup content')
             response = self.app.get('/backup', status="*")
-            self.assertTrue(bg.called)
             self.assertEqual(response.body, 'backup content')
-            os.unlink('/tmp/sf_backup.tar.gz')
+            os.unlink('/var/www/managesf/sf_backup.tar.gz')
             response = self.app.get('/backup', status="*")
             self.assertEqual(response.status_int, 404)
-        with patch('managesf.controllers.backup.backup_get',
-                   side_effect=raiseexc):
-            response = self.app.get('/backup', status="*")
-            self.assertEqual(response.status_int, 500)
-            self.assertEqual(response.body,
-                             'Unable to process your request, failed '
-                             'with unhandled error (server side): FakeExcMsg')
 
     def test_backup_post(self):
         with patch('managesf.controllers.backup.backup_start') as bs:

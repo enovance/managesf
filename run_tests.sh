@@ -24,6 +24,8 @@ FLAKE8_ERRORS=$?
 
 echo "ManageSF tests"
 echo "~~~~~~~~~~~~~"
+sudo mkdir -p /var/www/managesf
+sudo chown $USER /var/www/managesf
 (rm -Rf .tox; tox)
 MANAGESF_ERRORS=$?
 echo
