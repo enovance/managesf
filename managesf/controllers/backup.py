@@ -34,7 +34,7 @@ class Backup(object):
 
     def check_for_service(self, ru, service):
         attempt = 0
-        while attempt <= 350:
+        while attempt <= 30:
             p = ru._ssh(service)
             logger.debug(" Return status is %s" % p.returncode)
             if p.returncode != 0:
@@ -44,12 +44,14 @@ class Backup(object):
                 break
 
     def start(self):
-        cmd = '/root/backup.sh'
         logger.debug(" start backup of Gerrit, jenkins and mysql")
-        self.gru._ssh(cmd)
-        self.jru._ssh(cmd)
-        self.msqlru._ssh(cmd)
-        gerrit_service = 'wget --spider http://localhost:8080/r/'
+        p = self.gru._ssh('/root/backup_gerrit.sh')
+        logger.info("-> Gerrit backup: %d" % p.returncode)
+        self.jru._ssh('/root/backup_jenkins.sh')
+        logger.info("-> Jenkins backup: %d" % p.returncode)
+        self.msqlru._ssh('/root/backup_mysql.sh')
+        logger.info("-> Mysql backup: %d" % p.returncode)
+        gerrit_service = 'wget --spider http://localhost:8000/r/'
         self.check_for_service(self.gru, gerrit_service)
         jenkins_service = 'wget --spider http://localhost:8082/jenkins/'
         self.check_for_service(self.jru, jenkins_service)
@@ -61,10 +63,9 @@ class Backup(object):
     def restore(self):
         self.msqlru._scpToRemote('/tmp/sf_backup.tar.gz',
                                  '/root/sf_backup.tar.gz')
-        cmd = '/root/restore.sh'
-        self.msqlru._ssh(cmd)
-        self.gru._ssh(cmd)
-        self.jru._ssh(cmd)
+        self.msqlru._ssh('/root/restore_mysql.sh')
+        self.gru._ssh('/root/restore_gerrit.sh')
+        self.jru._ssh('/root/restore_jenkins.sh')
         gerrit_service = 'wget --spider http://localhost:8080/r/'
         self.check_for_service(self.gru, gerrit_service)
         jenkins_service = 'wget --spider http://localhost:8082/jenkins/'
