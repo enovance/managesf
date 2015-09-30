@@ -192,6 +192,7 @@ def membership_command(parser):
 
     remove = sub_cmd.add_parser('remove')
     membership_args(remove)
+    remove.add_argument('--group', metavar='core-group, dev-group, ptl-group')
 
     sub_cmd.add_parser('list', help='Print a list of active users')
 
@@ -520,6 +521,8 @@ def membership_action(args, base_url, headers):
     if args.subcommand == 'remove':
         logger.info('Remove member %s from project %s', args.user,
                     args.project)
+        if args.group:
+            url = build_url(url, args.group)
         return requests.delete(url, headers=headers, cookies=auth_cookie)
 
 
