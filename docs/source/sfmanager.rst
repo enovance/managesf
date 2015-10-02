@@ -140,15 +140,6 @@ projectname-dev
     Group of developers, required when project is private. Members can not add
     any other user to any group.
 
-Add user to project groups
-''''''''''''''''''''''''''
-
-.. code-block:: bash
-
- sfmanager --url <http://sfgateway.dom> --auth user:password \
-           project add_user --name user1 --groups p1-ptl,p1-core
-
-
 List project users
 ''''''''''''''''''
 
@@ -157,7 +148,17 @@ Currently only lists all known users.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           project list_user
+           membership list
+
+
+Add user to project groups
+''''''''''''''''''''''''''
+
+.. code-block:: bash
+
+ sfmanager --url <http://sfgateway.dom> --auth user:password \
+           membership add --name user1 --project p1 --groups p1-ptl p1-core
+
 
 
 Remove user from project groups
@@ -166,7 +167,7 @@ Remove user from project groups
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           project delete_user --name user1 --group p1-ptl
+           membership remove --name user1 --project p1 --group p1-ptl
 
 If the request does not provide a specific group to delete the user from, SF
 will remove the user from all groups associated to a project.
@@ -174,7 +175,7 @@ will remove the user from all groups associated to a project.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           project delete_user --name user1
+           membership remove --name user1 --project p1
 
 
 User management
@@ -272,10 +273,11 @@ Example:
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section sectionname url 'gerrit@$hostname:/path/git/${name}.git'
+           replication configure add --section sectionname \
+           url 'gerrit@$hostname:/path/git/${name}.git'
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section sectionname projects projectname
+           replication configure add --section sectionname projects projectname
 
 
 Trigger replication manually
@@ -287,7 +289,7 @@ little bit (15 seconds by default) to batch multiple commits into a single push 
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           trigger_replication --project config
+           replication trigger --project config
 
 
 List existing replication configs and settings
@@ -301,13 +303,13 @@ configuration section and can be filtered to a single setting too.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config list
+           replication configure list
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           get-all --section sectionname
+           replication get-all --section sectionname
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           get-all --section sectionname url
+           replication get-all --section sectionname url
 
 
 Delete replication config
@@ -319,7 +321,7 @@ does not remove data on the remote side.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           remove-section sectionname
+           replication remove-section sectionname
 
 Modify existing settings
 ''''''''''''''''''''''''
@@ -327,7 +329,7 @@ Modify existing settings
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config replace-all --section sectionname projects project1,project3
+           replication configure replace-all --section sectionname projects project1,project3
 
 
 Using SSH keys to authenticate replication
@@ -361,19 +363,21 @@ The corresponding Gerrit replication can be created using the following URLs:
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section firstrepo url 'git@alias_gh_firstrepo:accountname/${name}.git'
+           replication configure add --section firstrepo url 'git@alias_gh_firstrepo:accountname/${name}.git'
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section firstrepo projects projectname1
+           replication configure add --section firstrepo projects projectname1
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section secondrepo url 'git@alias_gh_secondrepo:accountname/${name}.git'
+           replication configure add --section secondrepo url 'git@alias_gh_secondrepo:accountname/${name}.git'
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           replication_config add --section secondrepo projects projectname2
+           replication configure add --section secondrepo projects projectname2
 
 
-You can use sfmanager also to add or remove SSH keys to Gerrit. For example::
+You can use sfmanager also to add or remove SSH keys to Gerrit. For example.
+
+.. code-block:: bash
 
  ssh-keygen -N "" -f private_ssh.key
 
@@ -392,35 +396,43 @@ The following commands show a complete example how to create a simple new
 project and add a SSH-key based authentication for replication to GitHub. Create
 a new public/private SSH key and add the content of the file private_ssh.key.pub
 to your GitHub repository (in settings / Deploy keys; don't forget to enable
-write access)::
+write access)
+
+.. code-block:: bash
 
  ssh-keygen -N "" -f private_ssh.key
 
-Create a new project if required::
+Create a new project if required
+
+.. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> \
      --auth user1:userpass \
      project create --name testrepo
 
-Now add the replication config and SSH keys::
+Now add the replication config and SSH keys
+
+.. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> \
      --auth user1:userpass \
-     replication_config add --section testrepo url 'git@alias_gh_firstrepo:username/${name}.git'
+     replication configure add --section testrepo url 'git@alias_gh_firstrepo:username/${name}.git'
 
  sfmanager --url <http://sfgateway.dom> \
      --auth user1:userpass \
-     replication_config add --section testrepo projects testrepo
+     replication configure add --section testrepo projects testrepo
 
  sfmanager --url <http://sfgateway.dom> \
      --auth user1:userpass \
      gerrit_ssh_config add --alias alias_gh_firstrepo --key private_ssh.key --hostname github.com
 
-Finally trigger the initial replication::
+Finally trigger the initial replication
+
+.. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> \
      --auth user1:userpass \
-     trigger_replication
+     replication trigger
 
 Done! After a few minutes your commits should appear on the GitHub repository.
 
@@ -444,7 +456,15 @@ Only the SF administrator can perform and retrieve a backup.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           backup_get
+           system backup_start
+
+Once the server generated the tar file of the backup you can then download it with
+the following command
+
+.. code-block:: bash
+
+ sfmanager --url <http://sfgateway.dom> --auth user:password \
+           system backup_get
 
 A file called "sf_backup.tar.gz" will be created in the local directory.
 
@@ -463,4 +483,4 @@ SF allows you to restore a backup in one of the following way.
 .. code-block:: bash
 
  sfmanager --url <http://sfgateway.dom> --auth user:password \
-           restore --filename sf_backup.tar.gz
+           system restore --filename sf_backup.tar.gz
