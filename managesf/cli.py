@@ -302,8 +302,8 @@ def user_management_command(sp):
     cump.add_argument('--email', '-e', nargs='?', metavar='email',
                       required=True, help='The user email')
     cump.add_argument('--fullname', '-f', nargs='+', metavar='John Doe',
-                      required=False,
-                      help="The user's full name, defaults to username")
+                      help="The user's full name, defaults to username",
+                      required=True)
     cump.add_argument('--ssh-key', '-s', nargs='?', metavar='/path/to/pub_key',
                       required=False, help="The user's ssh public key file")
     uump = sp.add_parser('update', help='Update user details. Admin can update'
