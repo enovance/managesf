@@ -71,14 +71,14 @@ class dummy_conf():
              'py.warnings': {'handlers': ['console']},
              '__force_dict__': True},
         'handlers': {
-                'console': {'level': 'DEBUG',
-                            'class': 'logging.StreamHandler',
-                            'formatter': 'simple'}},
-                'formatters': {
-                    'simple': {
-                        'format': (
-                            '%(asctime)s %(levelname)-5.5s [%(name)s]'
-                            '[%(threadName)s] %(message)s')}}
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'simple'}},
+        'formatters': {
+            'simple': {
+                'format': ('%(asctime)s %(levelname)-5.5s [%(name)s]'
+                           '[%(threadName)s] %(message)s')}}
     }
     htpasswd = {
         'filename': tempfile.mkstemp()[1]

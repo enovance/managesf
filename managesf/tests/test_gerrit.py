@@ -296,13 +296,11 @@ class TestGerritController(TestCase):
             self.assertEqual(0, len(dgm.mock_calls))
 
     def test_delete_project(self):
-        ctx = [patch('managesf.controllers.gerrit.get_cookie'),
-               patch('managesf.controllers.gerrit.user_owns_project'),
-               patch('managesf.controllers.gerrit.user_is_administrator'),
-               patch('managesf.controllers.gerrit.GerritUtils.delete_project'),
-               patch(
-               'managesf.controllers.gerrit.CustomGerritClient.deleteGroup'),
-               patch('managesf.controllers.gerrit.gerrit.Gerrit._ssh')]
+        ctx = []
+        for method in ('get_cookie', 'user_owns_project',
+                       'user_is_administrator', 'GerritUtils.delete_project',
+                       'CustomGerritClient.deleteGroup', 'gerrit.Gerrit._ssh'):
+            ctx.append('managesf.controllers.%s' % method)
         with nested(*ctx) as (gc, uop, uia, dp, dg, ssh):
             ssh.return_value = ("", "")
             uop.return_value = False
