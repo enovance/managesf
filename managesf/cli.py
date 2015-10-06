@@ -413,11 +413,10 @@ def response(resp):
         print resp.text
         return True
     if resp.status_code // 100 == 4:
-        msg = 'The user and or project is not found.'
+        msg = 'NOT FOUND : %s' % resp.text
         die(msg)
     if resp.status_code // 100 == 5:
-        msg = 'Unexpected server error. Please check' \
-              ' the state of Software Factory.'
+        msg = 'SERVER ERROR : %s' % resp.text
         die(msg)
     else:
         die(resp.text)
