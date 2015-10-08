@@ -261,6 +261,9 @@ class TestManageSFAppProjectController(FunctionalTest):
             self.assertEqual(response.body,
                              'Unable to process your request, failed '
                              'with unhandled error (server side): FakeExcMsg')
+        # Create with an invalid name
+        response = self.app.put('/project/Prf', status='*')
+        self.assertEqual(response.status_int, 500)
 
     def test_project_delete(self):
         # Delete a project with no name

@@ -13,6 +13,7 @@
 # under the License.
 
 import random
+import re
 import string
 import time
 
@@ -257,6 +258,12 @@ class ProjectController(RestController):
             abort(400)
         try:
             # create project
+            name_re = re.compile('^[a-z][a-z0-9-_]{0,99}$')
+            if not name_re.match(name):
+                raise ValueError('The name should have a length between 1 and '
+                                 '100 characters. Only lower case letters '
+                                 '(a-z), numbers, dashes and underscores are '
+                                 'allowed, must start with a letter')
             inp = request.json if request.content_length else {}
             for gn in ('ptl-group-members', 'core-group-members',
                        'dev-group-members'):
