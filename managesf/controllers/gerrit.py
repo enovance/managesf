@@ -683,7 +683,7 @@ def commit_init_tests_scripts(project_name):
                              'zuul', 'projects.yaml')
     unit_test = '%s-unit-tests' % project_name
 
-    with open(job_file, 'rw') as fd:
+    with open(job_file, 'r+') as fd:
         job_yaml = yaml.load(fd)
         projects = [x['project']['name'] for x in job_yaml
                     if x.get('project')]
