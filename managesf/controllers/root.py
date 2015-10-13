@@ -211,6 +211,9 @@ class ProjectController(RestController):
                            'admin': 0,
                            'groups': {}}
             groups = gerrit.get_project_groups(p)
+            if isinstance(groups, bool):
+                logger.info("Could not find project %s: %s" % (p, str(groups)))
+                continue
             for group in groups:
                 if group['name'].endswith(('-ptl', '-core', '-dev')):
                     grp = group['name'].split('-')[-1]

@@ -215,6 +215,30 @@ class TestManageSFAppProjectController(FunctionalTest):
                 self.assertFalse(_mock.called)
             self.assertEqual(200, response.status_int)
 
+    def test_project_get_all_group_missing(self):
+        ctx = [patch('managesf.controllers.gerrit.get_projects'),
+               patch('managesf.controllers.gerrit.get_projects_by_user'),
+               patch('managesf.controllers.gerrit.get_open_changes'),
+               patch('managesf.controllers.redminec.get_open_issues'),
+               patch('managesf.controllers.gerrit.get_project_groups')]
+        with nested(*ctx) as (gp, gpu, goc, goi, gpg):
+            gp.return_value = ['p0', 'p1', ]
+            gpu.return_value = ['p1', ]
+            goc.return_value = [{'project': 'p1'}]
+            goi.return_value = {'issues': [{'project': {'name': 'p1'}}]}
+            # The group was not found
+            gpg.return_value = False
+            # Cookie is only required for the internal cache
+            response = self.app.set_cookie('auth_pubtkt', 'something')
+            response = self.app.get('/project/')
+            self.assertEqual(200, response.status_int)
+            body = json.loads(response.body)
+            self.assertIn('p0', body)
+            self.assertTrue(body['p1']['open_reviews'] and
+                            body['p1']['open_issues'])
+            # The groups entry should be there, but empty
+            self.assertEqual({}, body['p0']['groups'])
+
     def test_project_get_one(self):
         ctx = [patch('managesf.controllers.gerrit.get_projects'),
                patch('managesf.controllers.gerrit.get_projects_by_user'),
