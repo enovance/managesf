@@ -689,7 +689,7 @@ def commit_init_tests_scripts(project_name):
     unit_test = '%s-unit-tests' % project_name
 
     with open(job_file, 'r+') as fd:
-        job_yaml = yaml.load(fd)
+        job_yaml = yaml.load(fd.read())
         projects = [x['project']['name'] for x in job_yaml
                     if x.get('project')]
         if project_name not in projects:
