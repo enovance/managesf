@@ -37,7 +37,7 @@ class TestBackup(TestCase):
             self.assertRaises(exc.HTTPUnauthorized, lambda: backup.Backup())
             uia.return_value = True
             backup.Backup()
-            self.assertEqual(4, len(ru.mock_calls))
+            self.assertEqual(5, len(ru.mock_calls))
 
     def test_start(self):
         ctx = [patch('managesf.controllers.backup.user_is_administrator'),
