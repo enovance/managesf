@@ -46,11 +46,17 @@ class Backup(object):
                 break
 
     def start(self):
-        logger.debug(" start backup of Gerrit, jenkins and mysql")
+        logger.debug(" start backup of Gerrit, jenkins, redmine and mysql")
         p = self.gru._ssh('/root/backup_gerrit.sh')
         logger.info("-> Gerrit backup: %d" % p.returncode)
         self.jru._ssh('/root/backup_jenkins.sh')
         logger.info("-> Jenkins backup: %d" % p.returncode)
+        try:
+            self.msqlru._ssh('/root/backup_redmine.sh')
+            logger.info("-> Redmine backup: %d" % p.returncode)
+        except:
+            # script might not exist, we don't care for now
+            pass
         self.msqlru._ssh('/root/backup_mysql.sh')
         logger.info("-> Mysql backup: %d" % p.returncode)
         gerrit_service = 'wget --spider http://localhost:8000/r/'
@@ -61,7 +67,7 @@ class Backup(object):
         logger.debug(" generate backup")
         self.mru._ssh(
             'tar --absolute-names -czPf ' +
-            '/var/www/managesf/sf_backup.tar.gz /root/.bup /root/alldb.sql.gz')
+            '/var/www/managesf/sf_backup.tar.gz /root/.bup /root/*db.sql.gz')
         self.mru._ssh('chmod 0400 /var/www/managesf/sf_backup.tar.gz')
         self.mru._ssh('chown apache:apache /var/www/managesf/sf_backup.tar.gz')
 
