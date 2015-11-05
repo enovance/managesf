@@ -61,7 +61,7 @@ class Backup(object):
         logger.debug(" generate backup")
         self.mru._ssh(
             'tar --absolute-names -czPf ' +
-            '/var/www/managesf/sf_backup.tar.gz /root/.bup /root/alldb.sql.gz')
+            '/var/www/managesf/sf_backup.tar.gz /root/.bup /root/*db.sql.gz')
         self.mru._ssh('chmod 0400 /var/www/managesf/sf_backup.tar.gz')
         self.mru._ssh('chown apache:apache /var/www/managesf/sf_backup.tar.gz')
 
