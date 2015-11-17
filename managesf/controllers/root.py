@@ -327,8 +327,21 @@ class ProjectController(RestController):
                     if '@' not in u:
                         response.status = 400
                         return "User must be identified by its email address"
+
+            # Early check of upstream availability
+            if 'upstream' in inp:
+                ssh_key = None
+                if 'upstream-ssh-key' in inp:
+                    ssh_key = inp['upstream-ssh-key']
+                success, msg = gerrit.utils.GerritRepo.check_upstream(
+                    inp["upstream"], ssh_key)
+                if not success:
+                    response.status = 400
+                    return msg
+
             for service in SF_SERVICES:
                 service.project.create(name, user, inp)
+
             response.status = 201
             self.set_cache(None)
             return "Project %s has been created." % name
