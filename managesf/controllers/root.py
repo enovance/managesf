@@ -44,7 +44,7 @@ CLIENTERRORMSG = "Unable to process your request, failed with "\
 
 # instanciate service plugins
 SF_SERVICES = []
-DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine']
+DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'jenkins']
 
 
 def load_services():
