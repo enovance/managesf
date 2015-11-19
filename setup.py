@@ -48,6 +48,7 @@ setup(
             ('SFRedmine = managesf.services.redmine:SoftwareFactoryRedmine'),
             ('jenkins = managesf.services.jenkins:Jenkins'),
             ('etherpad = managesf.services.etherpad:Etherpad'),
+            ('lodgeit = managesf.services.lodgeit:Lodgeit'),
         ],
     },
     url=('http://softwarefactory.enovance.com/'
