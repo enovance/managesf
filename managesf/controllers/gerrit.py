@@ -173,8 +173,14 @@ class GerritRepo(object):
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT,
                              env=self.env, cwd=cwd)
+        # Consumme stdout quickly for when project are big
+        std_out = []
+        while True:
+            l = p.stdout.readline()
+            if not l: break
+            std_out.append(l[:-1])
         p.wait()
-        std_out, std_err = p.communicate()
+        std_out, std_err = "\n".join(std_out), p.stderr.read()
         # logging std_out also logs std_error as both use same pipe
         if std_out:
             logger.info("[gerrit] cmd %s output" % cmd)
