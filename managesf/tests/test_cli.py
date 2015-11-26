@@ -62,17 +62,27 @@ class BaseFunctionalTest(TestCase):
                 method.assert_called_with(expected_url, **params)
 
 
-class TestProjectUserAction(BaseFunctionalTest):
+class TestProjectAction(BaseFunctionalTest):
     def test_create_project(self):
         args = self.default_args
         args += 'project create --name proj1'.split()
-        expected_url = self.base_url + '/project/proj1'
+        expected_url = self.base_url + 'project/proj1/'
         self.assert_secure('put', args, cli.project_action, expected_url)
+
+    def test_create_project_with_all_branches(self):
+        cmd = 'project create --name proj2 --upstream git://tests.dom/test.git' \
+              ' --add-branches'
+        args = self.default_args
+        args += cmd.split()
+        expected_url = self.base_url + 'project/proj2/'
+        self.assert_secure('put', args, cli.project_action, expected_url,
+                           {'upstream': 'git://tests.dom/test.git',
+                            'add-branches': True})
 
     def test_delete_project(self):
         args = self.default_args
         args += 'project delete --name proj1'.split()
-        expected_url = self.base_url + '/project/proj1'
+        expected_url = self.base_url + 'project/proj1/'
         self.assert_secure('delete', args, cli.project_action, expected_url)
 
 
