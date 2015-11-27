@@ -28,7 +28,7 @@ from pecan import request, response
 from stevedore import driver
 
 from managesf.controllers import gerrit as gerrit_controller
-from managesf.controllers import backup, localuser, introspection
+from managesf.controllers import backup, localuser, introspection, pages
 from managesf.services import base, gerrit
 from managesf.services import exceptions
 
@@ -393,6 +393,56 @@ class ProjectController(RestController):
             return report_unhandled_error(e)
 
 
+class PagesController(RestController):
+    # TODO(fbo): check user/owner
+    # TODO(fbo): add logs
+
+    @expose('json')
+    def post(self, project):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        infos = request.json if request.content_length else {}
+        try:
+            ret = pages.update_content_url(project, infos)
+        except pages.InvalidInfosInput as e:
+            abort(400, detail=e.message)
+        except pages.PageNotFound as e:
+            abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+        return ret
+
+    @expose('json')
+    def get(self, project):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        try:
+            ret = pages.get_content_url(project)
+        except pages.PageNotFound as e:
+            abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+        return ret
+
+    @expose('json')
+    def delete(self, project):
+        if request.remote_user is None:
+            # remote_user must be set by auth_pubtkt plugin of apache
+            # if not there we abort !
+            abort(403)
+        try:
+            ret = pages.delete_content_url(project)
+        except pages.PageNotFound as e:
+            abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+        return ret
+
+
 class LocalUserController(RestController):
 
     @expose('json')
@@ -709,3 +759,4 @@ class RootController(object):
     about = introspection.IntrospectionController()
     sshconfig = SSHConfigController()
     tests = TestsController()
+    pages = PagesController()

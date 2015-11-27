@@ -59,7 +59,8 @@ class FunctionalTest(TestCase):
                        'mysql': c.mysql,
                        'nodepool': c.nodepool,
                        'etherpad': c.etherpad,
-                       'lodgeit': c.lodgeit, }
+                       'lodgeit': c.lodgeit,
+                       'pages': c.pages, }
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
         # 'logging': c.logging}
