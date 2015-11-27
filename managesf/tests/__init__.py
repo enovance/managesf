@@ -97,3 +97,6 @@ class dummy_conf():
     sshconfig = {
         'confdir': '/tmp'
     }
+    pages = {
+        'maps': '/tmp/pages.txt'
+    }
