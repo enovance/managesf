@@ -166,6 +166,8 @@ class BaseServicePlugin(object):
     service_name = "base service"
 
     def __init__(self, conf):
+        self._client = None
+        self._client_last_refresh = -1
         self._full_conf = conf
         try:
             self.configure_plugin(conf)
@@ -188,8 +190,18 @@ class BaseServicePlugin(object):
             msg = ("The %s service is not available" % self._config_section)
             raise exc.ServiceNotAvailableError(msg)
 
-    def get_client(self, cookie=None):
+    def _get_client(self, cookie=None, **kwargs):
         """returns a service client to be used by the managers."""
+
+    def get_client(self, cookie=None, **kwargs):
+        # arbitrarily refresh the client every hour
+        if (not self._client or
+           time.time() - self._client_last_refresh > 3600):
+            self._client = self._get_client(cookie=cookie, **kwargs)
+            self._client_last_refresh = time.time()
+            return self._client
+        else:
+            return self._client
 
 
 @six.add_metaclass(abc.ABCMeta)
