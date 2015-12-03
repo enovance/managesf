@@ -15,10 +15,12 @@
 # under the License.
 
 
+import logging
 import time
 
 from pysflib.sfgerrit import GerritUtils
 from pysflib.sfauth import get_cookie
+from requests.auth import HTTPBasicAuth
 
 from managesf.services import base
 from managesf.services.gerrit import membership
@@ -27,6 +29,9 @@ from managesf.services.gerrit import role
 from managesf.services.gerrit import user
 from managesf.services.gerrit import review
 from managesf.services.gerrit import repository
+
+
+logger = logging.getLogger(__name__)
 
 
 class Gerrit(base.BaseCodeReviewServicePlugin):
@@ -72,6 +77,17 @@ class SoftwareFactoryGerrit(Gerrit):
 
     def get_client(self, cookie=None):
         if not cookie:
+            try:
+                basic = HTTPBasicAuth(self.conf['admin_user'],
+                                      self.conf['admin_password'])
+                return GerritUtils(self.conf['url'],
+                                   auth=basic)
+            except:
+                # if we can't get the admin credentials from the config,
+                # let's not panic
+                msg = ('[%s] could not find admin credentials, '
+                       'going with SF authentication')
+                logger.debug(msg % self.service_name)
             # Use an admin cookie
             if int(time.time()) - globals()['ADMIN_COOKIE_DATE'] > \
                     globals()['COOKIE_VALIDITY']:
