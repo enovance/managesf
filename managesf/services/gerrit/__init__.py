@@ -46,7 +46,7 @@ class Gerrit(base.BaseCodeReviewServicePlugin):
         self.repository = None
         self.review = None
 
-    def get_client(self, cookie=None):
+    def _get_client(self, cookie=None):
         raise NotImplementedError
 
 
@@ -70,7 +70,7 @@ class SoftwareFactoryGerrit(Gerrit):
         self.repository = repository.SFGerritRepositoryManager(self)
         self.review = review.SFGerritReviewManager(self)
 
-    def get_client(self, cookie=None):
+    def _get_client(self, cookie=None, **kwargs):
         if not cookie:
             # Use an admin cookie
             if int(time.time()) - globals()['ADMIN_COOKIE_DATE'] > \

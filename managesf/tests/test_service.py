@@ -15,6 +15,7 @@
 # under the License.
 
 from unittest import TestCase
+from mock import patch
 import time
 
 from managesf.services import exceptions as exc
@@ -69,3 +70,18 @@ class TestService(TestCase):
         self.assertRaises(exc.UnavailableActionError,
                           self.service.hooks.random_undefined_hook,
                           'dummy argument')
+
+    def test_cached_client(self):
+        with patch('time.time') as t:
+            t.return_value = 1
+            self.assertEqual("client1",
+                             self.service.get_client())
+            # client has changed but we still use the cached version
+            t.return_value = 2000
+            self.assertEqual("client1",
+                             self.service.get_client())
+            self.assertEqual("client2",
+                             self.service._get_client())
+            t.return_value = 3700
+            self.assertEqual("client2",
+                             self.service.get_client())
