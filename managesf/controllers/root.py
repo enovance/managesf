@@ -721,6 +721,40 @@ class SSHConfigController(RestController):
         response.status = 204
 
 
+class HooksController(RestController):
+
+    @expose('json')
+    def post(self, hook_name):
+        # TODO: maybe we should have a specific user defined to run hooks
+        if request.remote_user is None:
+            abort(403)
+        d = request.json if request.content_length else {}
+        results = {}
+        unavailable_hooks = 0
+        return_code = 200
+        for s in SF_SERVICES:
+            try:
+                results[s.service_name] = getattr(s.hooks,
+                                                  hook_name)(**d)
+            except exceptions.UnavailableActionError as e:
+                results[s.service_name] = str(e)
+                unavailable_hooks += 1
+                logger.debug('[%s] hook %s is not defined' % (s.service_name,
+                                                              hook_name))
+            except Exception as e:
+                results[s.service_name] = str(e)
+                return_code = 400
+                msg = '[%s] hook %s failed with error: %s'
+                logger.debug(msg % (s.service_name,
+                                    hook_name,
+                                    e.message))
+        if len(SF_SERVICES) == unavailable_hooks:
+            return_code = 404
+        response.status = return_code
+        results['hook_name'] = hook_name
+#        return results
+
+
 class TestsController(RestController):
 
     @expose('json')
@@ -767,3 +801,4 @@ class RootController(object):
     sshconfig = SSHConfigController()
     tests = TestsController()
     services_users = ServicesUsersController()
+    hooks = HooksController()

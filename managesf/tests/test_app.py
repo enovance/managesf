@@ -27,10 +27,12 @@ from redmine.exceptions import ValidationError
 from pysflib.sfredmine import RedmineUtils
 from managesf.tests import dummy_conf
 
+from managesf.services.base import BackupManager, BaseHooksManager
+from managesf.services import exceptions as exc
+
 # plugins imports
 # TODO: should be done dynamically depending on what plugins we want
-from managesf.services.base import BackupManager
-from managesf.services import exceptions as exc
+
 from managesf.services.gerrit import project
 from managesf.services.gerrit import utils
 from managesf.services.gerrit.membership import SFGerritMembershipManager
@@ -883,3 +885,48 @@ class TestManageSFServicesUserController(FunctionalTest):
                                        extra_environ=environ, status="*")
             self.assertEqual(response.status_int, 204)
             redmine_delete.assert_called_with(username='iggy')
+
+
+class TestHooksController(FunctionalTest):
+    def test_non_existing_hook(self):
+        environ = {'REMOTE_USER': self.config['admin']['name']}
+        resp = self.app.post_json('/hooks/toto', {'arg1': 1, 'arg2': 2},
+                                  extra_environ=environ, status="*")
+        self.assertEqual(404, resp.status_int)
+#        j = json.loads(resp.body)
+#        self.assertEqual(len(self.config['services']),
+#                         len(j))
+
+#    def test_no_remote_user(self)
+#        resp = self.app.post_json('/hooks/patchset_created',
+#                                  {'arg1': 1, 'arg2': 2},
+#                                  status="*")
+#        self.assertEqual(403, resp.status_int)
+
+    def test_patchset_created(self):
+        environ = {'REMOTE_USER': self.config['admin']['name']}
+        resp = self.app.post_json('/hooks/patchset_created',
+                                  {'arg1': 1, 'arg2': 2},
+                                  extra_environ=environ, status="*")
+        # TODO(mhu) will need to change once the redmine hook is implemented
+        self.assertEqual(404, resp.status_int)
+#        j = json.loads(resp.body)
+#        self.assertEqual(len(self.config['services']),
+#                         len(j))
+
+    def test_patchset_created_mocked(self):
+        environ = {'REMOTE_USER': self.config['admin']['name']}
+        with patch.object(BaseHooksManager,
+                          'patchset_created') as patchset_created:
+            patchset_created.return_value = "mocked"
+            resp = self.app.post_json('/hooks/patchset_created',
+                                      {'arg1': 1, 'arg2': 2},
+                                      extra_environ=environ, status="*")
+            self.assertEqual(200, resp.status_int)
+            patchset_created.assert_called_with(arg1=1,
+                                                arg2=2)
+#            j = json.loads(resp.body)
+#            self.assertEqual(len(self.config['services']),
+#                             len(j))
+#            self.assertTrue(all(j[s] == "mocked"
+#                            for s in len(self.config['services']))
