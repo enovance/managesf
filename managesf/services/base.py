@@ -37,7 +37,12 @@ class BaseHooksManager(object):
         self.plugin = plugin
 
     def patchset_created(self, *args, **kwargs):
-        """Called whenever a new patch is submitted."""
+        """Called whenever a new patch is submitted. Expected arguments
+        based on the gerrit hook with the same name:
+        'change', 'is-draft', 'change-url', 'project',
+        'branch', 'topic', 'uploader', 'commit', 'patchset',
+        'commit_message'
+        (The last one will be computed by the local hook script)"""
         raise exc.UnavailableActionError()
 
     def change_merged(self, *args, **kwargs):
