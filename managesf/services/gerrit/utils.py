@@ -35,17 +35,17 @@ def _exec(cmd, cwd=None, env=None):
         os.chdir(cwd)
     if not env:
         env = os.environ.copy()
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                         stderr=subprocess.STDOUT,
-                         env=env, cwd=cwd)
-    p.wait()
-    std_out, std_err = p.communicate()
-    # logging std_out also logs std_error as both use same pipe
-    if std_out:
-        logger.info("[gerrit] cmd %s output" % cmd)
-        logger.info(std_out)
+    try:
+        std_out = subprocess.check_output(cmd, env=env, cwd=cwd,
+                                          stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as err:
+        logger.exception(err)
+        raise
+
+    logger.info("[gerrit] cmd %s output" % cmd)
+    logger.info(std_out)
     os.chdir(ocwd)
-    return p.returncode, std_out, std_err
+    return std_out
 
 
 def ssh_wrapper_setup(filename):
@@ -109,16 +109,16 @@ class GerritRepo(object):
     @staticmethod
     def check_upstream(remote, ssh_key=None):
         cmd = "git ls-remote %s" % remote
-        if ssh_key:
-            env, path = set_gitssh_wrapper_from_str(ssh_key)
-            code, stdout, stderr = _exec(cmd, env=env)
-            os.remove(path)
-        else:
-            code, stdout, stderr = _exec(cmd)
-        if code != 0:
-            return False, "%s %s" % (stdout, stderr)
-        else:
-            return True, None
+        try:
+            if ssh_key:
+                env, path = set_gitssh_wrapper_from_str(ssh_key)
+                _exec(cmd, env=env)
+                os.remove(path)
+            else:
+                _exec(cmd)
+            return True
+        except subprocess.CalledProcessError():
+            return False
 
     def add_file(self, path, content):
         logger.info("[gerrit] Add file %s to index" % path)
@@ -194,24 +194,22 @@ class GerritRepo(object):
             cmd = 'git ls-remote --heads %s' % remote
             if ssh_key:
                 env, path = set_gitssh_wrapper_from_str(ssh_key)
-                code, output, err = _exec(cmd,
-                                          cwd=self.infos['localcopy_path'],
-                                          env=env)
+                output = _exec(cmd,
+                               cwd=self.infos['localcopy_path'],
+                               env=env)
             else:
-                code, output, err = self._exec(cmd)
-            if err:
-                logger.error('Can not list remote branches %s' % remote)
-            if output:
-                # Remove the '*' and master branch from the list of branches
-                for line in output.splitlines():
-                    branch = line.split('refs/heads/')[-1]
-                    if not branch and branch in ['*', 'master']:
-                        continue
-                    cmd = 'git checkout %s' % branch
-                    self._exec(cmd)
-                    cmd = 'git push -f origin upstream/%s:%s' % (branch,
-                                                                 branch)
-                    self._exec(cmd)
+                output = self._exec(cmd)
+
+            # Remove the '*' and master branch from the list of branches
+            for line in output.splitlines():
+                branch = line.split('refs/heads/')[-1]
+                if not branch and branch in ['*', 'master']:
+                    continue
+                cmd = 'git checkout %s' % branch
+                self._exec(cmd)
+                cmd = 'git push -f origin upstream/%s:%s' % (branch,
+                                                             branch)
+                self._exec(cmd)
 
     def review_changes(self, commit_msg):
         cmd = 'git review -s'
