@@ -186,7 +186,7 @@ class GerritRepo(object):
                     "Gerrit repository" % remote)
         cmd = "git checkout master"
         self._exec(cmd)
-        cmd = "git push -f origin upstream/master:master"
+        cmd = "git push -f origin master"
         self._exec(cmd)
         cmd = "git reset --hard origin/master"
         self._exec(cmd)
@@ -209,8 +209,7 @@ class GerritRepo(object):
                         continue
                     cmd = 'git checkout %s' % branch
                     self._exec(cmd)
-                    cmd = 'git push -f origin upstream/%s:%s' % (branch,
-                                                                 branch)
+                    cmd = 'git push -f origin %s' % branch
                     self._exec(cmd)
 
     def review_changes(self, commit_msg):
