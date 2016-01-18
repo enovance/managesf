@@ -764,8 +764,8 @@ class TestsController(RestController):
             abort(404)
 
         try:
-            gerrit_controller.propose_test_definition(project_name,
-                                                      request.remote_user)
+            code_review.review.propose_test_definition(project_name,
+                                                       request.remote_user)
         except Exception as e:
             abort(500, detail=e.message)
         if request.json:
@@ -773,8 +773,8 @@ class TestsController(RestController):
 
         if project_scripts:
             try:
-                gerrit_controller.propose_test_scripts(project_name,
-                                                       request.remote_user)
+                code_review.review.propose_test_scripts(project_name,
+                                                        request.remote_user)
             except Exception as e:
                 abort(500, detail=e.message)
 
