@@ -214,10 +214,12 @@ class GerritRepo(object):
                     self._exec(cmd)
 
     def review_changes(self, commit_msg):
-        cmd = 'git review -s'
-        self._exec(cmd)
+        logger.info("[gerrit] Send a review via git review")
+        cmd = "ssh-agent bash -c 'ssh-add %s; git review -s'" %\
+              self.conf.gerrit['sshkey_priv_path']
+        self._exec(cmd, cwd=self.infos['localcopy_path'])
         cmd = "git commit -a --author '%s' -m'%s'" % (self.email,
                                                       commit_msg)
-        self._exec(cmd)
+        self._exec(cmd, cwd=self.infos['localcopy_path'])
         cmd = 'git review'
-        self._exec(cmd)
+        self._exec(cmd, cwd=self.infos['localcopy_path'])
