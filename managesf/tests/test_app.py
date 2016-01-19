@@ -915,12 +915,14 @@ class TestManageSFServicesUserController(FunctionalTest):
 
     def test_delete_user_in_backends(self):
         environ = {'REMOTE_USER': self.config['admin']['name']}
-        ctx = [patch.object(SFRedmineUserManager, 'delete'), ]
-        with nested(*ctx) as (redmine_delete, ):
+        ctx = [patch.object(SFRedmineUserManager, 'delete'),
+               patch.object(g_user.SFGerritUserManager, 'delete'), ]
+        with nested(*ctx) as (redmine_delete, gerrit_delete ):
             response = self.app.delete('/services_users/iggy',
                                        extra_environ=environ, status="*")
             self.assertEqual(response.status_int, 204)
             redmine_delete.assert_called_with(username='iggy')
+            gerrit_delete.assert_called_with(username='iggy')
 
 
 class TestHooksController(FunctionalTest):
