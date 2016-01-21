@@ -312,7 +312,8 @@ class CustomGerritClient(gerrit.Gerrit):
             logger.info("[gerrit] Replication Trigger error - %s" % err)
 
 
-def init_git_repo(prj_name, prj_desc, upstream, private, ssh_key=None):
+def init_git_repo(prj_name, prj_desc, upstream, private,
+                  ssh_key=None, readonly=False):
     logger.info("[gerrit] Init gerrit project repo: %s" % prj_name)
     ge = get_client()
     grps = {}
@@ -333,6 +334,8 @@ def init_git_repo(prj_name, prj_desc, upstream, private, ssh_key=None):
     prefix = ''
     if private:
         prefix = 'private-'
+    if readonly:
+        prefix = 'readonly-%s' % prefix
     paths['project.config'] = file(template(prefix +
                                    'project.config')).read() % grps
     paths['groups'] = file(template(prefix + 'groups')).read() % grps
@@ -355,6 +358,7 @@ def init_project(name, json):
                else json['upstream-ssh-key'])
     description = "" if 'description' not in json else json['description']
     private = False if 'private' not in json else json['private']
+    readonly = False if 'readonly' not in json else json['readonly']
     ge = get_client()
     core = get_core_group_name(name)
     core_desc = "Core developers for project " + name
@@ -381,7 +385,7 @@ def init_project(name, json):
 
     owner = [get_ptl_group_name(name)]
     ge.create_project(name, description, owner)
-    init_git_repo(name, description, upstream, private, ssh_key)
+    init_git_repo(name, description, upstream, private, ssh_key, readonly)
 
 
 def add_user_to_projectgroups(project, user, groups):
