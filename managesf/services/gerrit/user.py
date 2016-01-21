@@ -111,14 +111,8 @@ class SFGerritUserManager(base.UserManager):
         else:
             query = email
         g_client = self.plugin.get_client()
-        cookie = g_client.g.kwargs['cookies']
-        url = "%s/r/a/accounts/%s" % (self.plugin.conf['url'],
-                                      query)
-        headers = {"Content-type": "application/json"}
-        resp = requests.get(url, headers=headers,
-                            cookies=cookie)
         try:
-            return json.loads(resp.content[4:])
+            return g_client.get_account(query)
         except:
             return None
         return None
@@ -132,16 +126,16 @@ class SFGerritUserManager(base.UserManager):
             msg = '[%s] %s not found, skip deletion'
             logger.debug(msg % (self.plugin.service_name,
                                 email or username))
-        else:
-            # remove project memberships
-            sql = ("DELETE FROM account_group_members "
-                   "WHERE account_id=%s;\n" % account_id)
-            # remove from accounts table
-            sql += ("DELETE FROM accounts "
-                    "WHERE account_id=%s;\n" % account_id)
-            # remove from external ids
-            sql += ("DELETE FROM account_external_ids "
-                    "WHERE account_id=%s;" % account_id)
+            return
+        # remove project memberships
+        sql = ("DELETE FROM account_group_members "
+               "WHERE account_id=%s;\n" % account_id)
+        # remove from accounts table
+        sql += ("DELETE FROM accounts "
+                "WHERE account_id=%s;\n" % account_id)
+        # remove from external ids
+        sql += ("DELETE FROM account_external_ids "
+                "WHERE account_id=%s;" % account_id)
         try:
             self.session.execute(sql)
             self.session.commit()
