@@ -15,7 +15,7 @@
 # under the License.
 
 from unittest import TestCase
-from mock import patch, call, Mock
+from mock import patch, call
 from contextlib import nested
 from gerritlib.gerrit import Gerrit
 
@@ -80,8 +80,7 @@ class TestSFGerritRoleManager(BaseSFGerritService):
 
 
 class TestSFGerritUserManager(BaseSFGerritService):
-    user_data = ''')]}\'
-{
+    user_data = '''{
   "_account_id": 5,
   "name": "Jotaro Kujoh",
   "email": "jojo@starplatinum.dom",
@@ -97,12 +96,12 @@ class TestSFGerritUserManager(BaseSFGerritService):
     def test_create(self):
         patches = [patch.object(self.gerrit.user, '_add_account_as_external'),
                    patch.object(self.gerrit.user, '_add_sshkeys'),
-                   patch('managesf.services.gerrit.user.requests.get'),
+                   patch.object(self.gerrit.user, 'get'),
                    patch('managesf.services.gerrit.user.requests.put'),
                    patch('managesf.services.gerrit.get_cookie'), ]
         with nested(*patches) as (add_external, add_sshkeys,
                                   get, put, get_cookie):
-            get.return_value = Mock(status_code=200, content=self.user_data)
+            get.return_value = self.user_data
             get_cookie.return_value = 'admin_cookie'
             self.gerrit.user.create('jojo', 'jojo@starplatinum.dom',
                                     'Jotaro Kujoh')
@@ -128,18 +127,12 @@ class TestSFGerritUserManager(BaseSFGerritService):
                           self.gerrit.user.get,
                           'mail@address.com', 'extra_user_param')
         patches = [patch('managesf.services.gerrit.get_cookie'),
-                   patch('managesf.services.gerrit.user.requests.get'), ]
+                   patch('pysflib.sfgerrit.GerritUtils.get_account'), ]
         with nested(*patches) as (get_cookie, get, ):
-            get.return_value = Mock(status_code=200, content=self.user_data)
+            get.return_value = self.user_data
             get_cookie.return_value = 'admin_cookie'
             u = self.gerrit.user.get(email='jojo@starplatinum.dom')
-            url = "%s/r/a/accounts/%s" % (self.gerrit.conf['url'],
-                                          'jojo@starplatinum.dom')
-            h = {"Content-type": "application/json"}
-            cookies = {'auth_pubtkt': 'admin_cookie'}
-            get.assert_called_with(url,
-                                   headers=h,
-                                   cookies=cookies)
+            get.assert_called_with('jojo@starplatinum.com')
             self.assertEqual('jojo',
                              u['username'])
 
@@ -149,11 +142,11 @@ class TestSFGerritUserManager(BaseSFGerritService):
         self.assertRaises(TypeError,
                           self.gerrit.user.delete,
                           'mail@address.com', 'username')
-        patches = [patch('managesf.services.gerrit.user.requests.get'),
+        patches = [patch('managesf.services.gerrit.user.get'),
                    patch.object(self.gerrit.user, 'session'),
                    patch('managesf.services.gerrit.user.G.Gerrit._ssh'), ]
         with nested(*patches) as (get, session, ssh):
-            get.return_value = Mock(status_code=200, content=self.user_data)
+            get.return_value = self.user_data
             sql = """DELETE FROM account_group_members WHERE account_id=5;
 DELETE FROM accounts WHERE account_id=5;
 DELETE FROM account_external_ids WHERE account_id=5;"""
