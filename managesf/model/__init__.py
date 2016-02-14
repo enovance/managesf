@@ -14,9 +14,9 @@
 # under the License.
 
 from pecan import conf  # noqa
-from sqlalchemy import create_engine, Column, String, exc
+from sqlalchemy import create_engine, Column, String, Integer, exc
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -38,6 +38,104 @@ class User(Base):
     email = Column(String(), nullable=False)
     hashed_password = Column(String(), nullable=False)
     sshkey = Column(String(), nullable=True)
+
+
+class SFUser(Base):
+    __tablename__ = 'SF_USERS'
+    id = Column(Integer(), primary_key=True)
+    username = Column(String(), nullable=False)
+    fullname = Column(String(), nullable=False)
+    email = Column(String(), nullable=False)
+    cauth_id = Column(Integer(), nullable=False)
+
+
+class SFUserCRUD:
+    def get(self, id=None, username=None, email=None,
+            fullname=None, cauth_id=None):
+        session = start_session()
+        if (id or username or email or fullname or cauth_id):
+            filtering = {}
+            if id:
+                filtering['id'] = id
+            if username:
+                filtering['username'] = username
+            if email:
+                filtering['email'] = email
+            if fullname:
+                filtering['fullname'] = fullname
+            if cauth_id:
+                filtering['cauth_id'] = cauth_id
+            try:
+                ret = session.query(SFUser).filter_by(**filtering).one()
+                return row2dict(ret)
+            except MultipleResultsFound:
+                # TODO(mhu) find a better Error
+                raise KeyError('search returned more than one result')
+            except NoResultFound:
+                return {}
+        else:
+            # all()
+            return [row2dict(ret) for ret in session.query(SFUser)]
+
+    def update(self, id, username=None, email=None,
+               fullname=None, cauth_id=None):
+        session = start_session()
+        try:
+            ret = session.query(SFUser).filter_by(id=id).one()
+            if username:
+                ret.username = username
+            if email:
+                ret.email = email
+            if fullname:
+                ret.fullname = fullname
+            if cauth_id:
+                ret.cauth_id = cauth_id
+            session.commit()
+        except NoResultFound:
+            # TODO(mhu) this should probably be logged somewhere
+            return
+
+    def create(self, username, email,
+               fullname, cauth_id=None):
+        session = start_session()
+        if username and email and fullname:
+            # assign a dummy value in case we lack the information
+            # as is likely to happen when migrating from a previous version.
+            # TODO(mhu) remove these for version n+2
+            cid = cauth_id or -1
+            user = SFUser(username=username,
+                          email=email,
+                          fullname=fullname,
+                          cauth_id=cid)
+            session.add(user)
+            session.commit()
+            return user.id
+        else:
+            msg = "Missing info required for user creation: %s|%s|%s"
+            raise KeyError(msg % (username, email, fullname))
+
+    def delete(self, id=None, username=None, email=None,
+               fullname=None, cauth_id=None):
+        session = start_session()
+        filtering = {}
+        if id:
+            filtering['id'] = id
+        if username:
+            filtering['username'] = username
+        if email:
+            filtering['email'] = email
+        if fullname:
+            filtering['fullname'] = fullname
+        if cauth_id:
+            filtering['cauth_id'] = cauth_id
+        try:
+            ret = session.query(SFUser).filter_by(**filtering).one()
+            session.delete(ret)
+            session.commit()
+            return True
+        except NoResultFound:
+            return False
+        # TODO(mhu) what about multiple results ?
 
 
 def init_model():
