@@ -74,9 +74,10 @@ class SFRedmineUserManager(RedmineUserManager):
     def create(self, username, email, full_name, **kwargs):
         rm = self.plugin.get_client()
         try:
-            rm.create_user(username, email, full_name)
+            u = rm.create_user(username, email, full_name)
             logger.debug('[%s] user %s created' % (self.plugin.service_name,
                                                    username))
+            return u.id
         except ValidationError as e:
             # not optimal but python-redmine does not differentiate this case
             if ('Resource already exists' in e.message) or\
@@ -84,6 +85,7 @@ class SFRedmineUserManager(RedmineUserManager):
                 msg = '[%s] user %s already exists, skipping creation'
                 logger.info(msg % (self.plugin.service_name,
                                    username))
+                return self.get(email=email) or self.get(username=username)
             else:
                 # unknown error, raise it
                 raise e
