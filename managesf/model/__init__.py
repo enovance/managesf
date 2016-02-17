@@ -17,6 +17,7 @@ import logging
 
 from pecan import conf  # noqa
 from sqlalchemy import create_engine, Column, String, Integer, exc, event
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.declarative import declarative_base
@@ -66,11 +67,74 @@ class SFUser(Base):
     id = Column(Integer(), primary_key=True)
     username = Column(String(255), nullable=False, unique=True)
     fullname = Column(String(255), nullable=True)
+    # Gerrit requires email unicity
     email = Column(String(255), nullable=False, unique=True)
     cauth_id = Column(Integer(), nullable=False)
 
 
+class SFUserServiceMapping(Base):
+    __tablename__ = 'SF_USERS_SERVICES_MAPPING'
+    # needed for constraint definition, not actually used
+    id = Column(Integer(), primary_key=True)
+    sf_user_id = Column(Integer(), ForeignKey('SF_USERS.id'),
+                        nullable=False)
+    # will simply store the plugin name
+    service = Column(String(255), nullable=False)
+    # for extended future compatibility, don't limit to integers
+    service_user_id = Column(String(255), nullable=False)
+    __table_args__ = (UniqueConstraint('sf_user_id',
+                                       'service',
+                                       'service_user_id',
+                                       name='unique_service_user'), )
+
+
 class SFUserCRUD:
+    def set_service_mapping(self, sf_user_id, service, service_user_id):
+        session = start_session()
+        r = SFUserServiceMapping(sf_user_id=sf_user_id,
+                                 service=service,
+                                 service_user_id=service_user_id)
+        session.add(r)
+        session.commit()
+
+    def get_service_mapping(self, service, sf_user_id):
+        session = start_session()
+        filtering = {'service': service,
+                     'sf_user_id': sf_user_id}
+        try:
+            ret = session.query(SFUserServiceMapping).filter_by(**filtering)
+            return ret.one().service_user_id
+        except MultipleResultsFound:
+            msg = 'Too many mappings for user #%s on service %s'
+            raise KeyError(msg % (sf_user_id, service))
+        except NoResultFound:
+            return None
+
+    def get_user_mapping(self, service, service_user_id):
+        session = start_session()
+        filtering = {'service': service,
+                     'service_user_id': service_user_id}
+        try:
+            ret = session.query(SFUserServiceMapping).filter_by(**filtering)
+            return ret.one().service_user_id
+        except MultipleResultsFound:
+            msg = 'Too many mappings for service %s\'s user #%s'
+            raise KeyError(msg % (service_user_id, service))
+        except NoResultFound:
+            return None
+
+    def delete_service_mapping(self, sf_user_id,
+                               service=None, service_user_id=None):
+        session = start_session()
+        filtering = {'sf_user_id': sf_user_id}
+        if service:
+            filtering['service'] = service
+        if service_user_id:
+            filtering['service_user_id'] = service_user_id
+        mappings = session.query(SFUserServiceMapping).filter_by(**filtering)
+        mappings.delete(synchronize_session=False)
+        session.commit()
+
     def get(self, id=None, username=None, email=None,
             fullname=None, cauth_id=None):
         session = start_session()
