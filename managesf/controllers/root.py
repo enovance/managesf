@@ -631,23 +631,38 @@ class ServicesUsersController(RestController):
                    (infos.get('external_id') != known_user['cauth_id']):
                     sfmanager.user.reset_cauth_id(known_user['id'],
                                                   infos['external_id'])
+                u = known_user['id']
             else:
-                sfmanager.user.create(username=infos['username'],
-                                      email=infos['email'],
-                                      fullname=infos['full_name'],
-                                      cauth_id=infos.get('external_id'))
+                u = sfmanager.user.create(username=infos['username'],
+                                          email=infos['email'],
+                                          fullname=infos['full_name'],
+                                          cauth_id=infos.get('external_id'))
             for service in SF_SERVICES:
                 try:
-                    if service.user.get(username=infos.get('username')) or\
-                       service.user.get(username=infos.get('email')):
+                    s_id = (service.user.get(username=infos.get('username')) or
+                            service.user.get(username=infos.get('email')))
+                    if s_id:
                         msg = '[%s] user %s exists, skipping creation'
                         logger.debug(msg % (service.service_name,
                                             infos.get('username')))
-                        continue
-                    service.user.create(username=infos.get('username'),
-                                        email=infos.get('email'),
-                                        full_name=infos.get('full_name'),
-                                        ssh_keys=infos.get('ssh_keys', []))
+                        mapped = sfmanager.user.mapping.get_user_mapping(
+                            service.service_name,
+                            s_id)
+                        if not mapped:
+                            sfmanager.user.mapping.set(u,
+                                                       service.service_name,
+                                                       s_id)
+                    else:
+                        full_name = infos.get('full_name')
+                        username = infos.get('username')
+                        ssh_keys = infos.get('ssh_keys', [])
+                        s_id = service.user.create(username=username,
+                                                   email=infos.get('email'),
+                                                   full_name=full_name,
+                                                   ssh_keys=ssh_keys)
+                        sfmanager.user.mapping.set(u,
+                                                   service.service_name,
+                                                   s_id)
                 except exceptions.UnavailableActionError:
                     msg = '[%s] service has no authenticated user backend'
                     logger.debug(msg % service.service_name)
@@ -667,14 +682,25 @@ class ServicesUsersController(RestController):
         if not is_admin(request.remote_user):
             abort(401,
                   detail='Deleting users is limited to administrators')
+        d_id = id
+        if not d_id and (email or username):
+            logger.debug('looking for %s %s' % (email, username))
+            d_id = sfmanager.user.get(username=username,
+                                      email=email).get('id')
+            logger.debug(d_id)
+        if not d_id:
+            response.status = 404
+            return
         try:
             for service in SF_SERVICES:
                 try:
                     service.user.delete(email=email, username=username)
+                    sfmanager.user.mapping.delete(d_id,
+                                                  service.service_name)
                 except exceptions.UnavailableActionError:
                     msg = '[%s] service has no authenticated user backend'
                     logger.debug(msg % service.service_name)
-            sfmanager.user.delete(id=id, email=email, username=username)
+            sfmanager.user.delete(id=d_id)
         except Exception as e:
             return report_unhandled_error(e)
         response.status = 204
