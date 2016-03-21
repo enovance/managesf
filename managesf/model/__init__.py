@@ -33,17 +33,17 @@ def row2dict(row):
 
 class User(Base):
     __tablename__ = 'users'
-    username = Column(String(), primary_key=True)
-    fullname = Column(String(), nullable=False)
-    email = Column(String(), nullable=False)
-    hashed_password = Column(String(), nullable=False)
-    sshkey = Column(String(), nullable=True)
+    username = Column(String(255), primary_key=True)
+    fullname = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    sshkey = Column(String(1023), nullable=True)
 
 
 def init_model():
     c = dict(conf.sqlalchemy)
     url = c.pop('url')
-    globals()['engine'] = create_engine(url, **c)
+    globals()['engine'] = create_engine(url, pool_recycle=600, **c)
     Base.metadata.create_all(engine)
 
 
