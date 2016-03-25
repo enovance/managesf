@@ -23,6 +23,9 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 engine = None
 
+MAX_PRIMARY_KEY_LEN = 191
+MAX_LEN = 4096
+
 
 def row2dict(row):
     ret = {}
@@ -33,11 +36,11 @@ def row2dict(row):
 
 class User(Base):
     __tablename__ = 'users'
-    username = Column(String(), primary_key=True)
-    fullname = Column(String(), nullable=False)
-    email = Column(String(), nullable=False)
-    hashed_password = Column(String(), nullable=False)
-    sshkey = Column(String(), nullable=True)
+    username = Column(String(MAX_PRIMARY_KEY_LEN), primary_key=True)
+    fullname = Column(String(MAX_LEN), nullable=False)
+    email = Column(String(MAX_LEN), nullable=False)
+    hashed_password = Column(String(MAX_LEN), nullable=False)
+    sshkey = Column(String(MAX_LEN), nullable=True)
 
 
 def init_model():
