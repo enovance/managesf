@@ -612,16 +612,24 @@ class LocalUserBindController(RestController):
 
 class ServicesUsersController(RestController):
 
+    def _remove_non_updatable_fields(self, infos):
+        forbidden = sum([s.user.check_forbidden_fields(**infos)
+                         for s in SF_SERVICES], [])
+        msg = 'The following fields cannot be updated: %s, discarding them'
+        logger.debug(msg % str(forbidden))
+        return dict((u, infos[u]) for u in infos.keys()
+                    if u not in forbidden)
+
     def _update(self, user_id, infos):
         sfmanager.user.update(user_id,
-                              username=infos['username'])
+                              username=infos.get('username'),
+                              email=infos.get('email'),
+                              fullname=infos.get('full_name'))
         for service in SF_SERVICES:
             s_id = sfmanager.user.mapping.get_service_mapping(
                 service.service_name,
                 user_id)
             if s_id:
-                # TODO(mhu) Update calls are not implemented in the service
-                # plugins; this will be done in a future US/patch
                 try:
                     service.user.update(uid=s_id, **infos)
                 except exceptions.UnavailableActionError:
@@ -664,13 +672,15 @@ class ServicesUsersController(RestController):
                     sfmanager.user.reset_cauth_id(known_user['id'],
                                                   infos['external_id'])
                 u = known_user['id']
-                self._update(u, infos)
+                clean_infos = self._remove_non_updatable_fields(infos)
+                self._update(u, clean_infos)
             # maybe we know this user by cauth_id but her details changed
             elif not known_user and infos.get('external_id', -1) != -1:
                 known_user = sfmanager.user.get(infos['external_id'])
                 if known_user:
                     u = known_user['id']
-                    self._update(u, infos)
+                    clean_infos = self._remove_non_updatable_fields(infos)
+                    self._update(u, clean_infos)
             else:
                 u = sfmanager.user.create(username=infos['username'],
                                           email=infos['email'],

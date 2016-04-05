@@ -893,7 +893,8 @@ class TestManageSFServicesUserController(FunctionalTest):
                                    '_add_account_as_external'),
                       patch('pysflib.sfgerrit.GerritUtils.create_account'),
                       patch.object(SFRedmineUserManager, 'get'),
-                      patch.object(g_user.SFGerritUserManager, 'get'), ]
+                      patch.object(g_user.SFGerritUserManager, 'get'),
+                      patch('pysflib.sfgerrit.GerritUtils.update_account'), ]
         rm_user = MagicMock()
         rm_user.id = 9
         gerrit_created = {"_account_id": 5,
@@ -939,7 +940,7 @@ class TestManageSFServicesUserController(FunctionalTest):
         # mock at a lower level
         with nested(*create_ctx) as (get_cookie, rm_create_user, ssh,
                                      external, create_account,
-                                     r_get, g_get, ):
+                                     r_get, g_get, g_update):
             get_cookie.return_value = 'admin_cookie'
 
             rm_create_user.return_value = rm_user2
@@ -966,7 +967,7 @@ class TestManageSFServicesUserController(FunctionalTest):
             self.assertEqual(response.status_int, 201)
         with nested(*create_ctx) as (get_cookie, rm_create_user, ssh,
                                      external, create_account,
-                                     r_get, g_get, ):
+                                     r_get, g_get, g_update):
             get_cookie.return_value = 'admin_cookie'
             # assert that user already existing in backend won't fail
 
@@ -981,7 +982,7 @@ class TestManageSFServicesUserController(FunctionalTest):
             self.assertEqual(response.status_int, 201)
         with nested(*create_ctx) as (get_cookie, rm_create_user, ssh,
                                      external, create_account,
-                                     r_get, g_get, ):
+                                     r_get, g_get, g_update):
             get_cookie.return_value = 'admin_cookie'
             # assert that user found in backend will skip gracefully
             r_get.return_value = rm_user.id
