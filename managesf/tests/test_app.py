@@ -418,9 +418,15 @@ class TestManageSFAppRestoreController(FunctionalTest):
         # restore a provided backup
         ctx = [patch('managesf.controllers.backup.backup_restore'),
                patch('managesf.controllers.backup.backup_unpack'),
-               patch.object(BackupManager,
-                            'restore'), ]
-        with nested(*ctx) as (backup_restore, backup_unpack, restore):
+               patch.object(BackupManager, 'restore'),
+               patch('managesf.controllers.root.is_admin')]
+        with nested(*ctx) as (backup_restore, backup_unpack,
+                              restore, is_admin):
+            is_admin.return_value = False
+            response = self.app.post('/restore', status="*",
+                                     upload_files=files)
+            self.assertEqual(response.status_int, 401)
+            is_admin.return_value = True
             response = self.app.post('/restore', status="*",
                                      upload_files=files)
             self.assertTrue(os.path.isfile(bkp))
@@ -430,7 +436,9 @@ class TestManageSFAppRestoreController(FunctionalTest):
                              len(restore.mock_calls))
             self.assertEqual(response.status_int, 204)
         # restore a provided backup - an error occurs
-        with nested(*ctx) as (backup_restore, backup_unpack, restore):
+        with nested(*ctx) as (backup_restore, backup_unpack,
+                              restore, is_admin):
+            is_admin.return_value = True
             backup_restore.side_effect = raiseexc
             response = self.app.post('/restore', status="*",
                                      upload_files=files)
@@ -452,11 +460,16 @@ class TestManageSFAppBackupController(FunctionalTest):
         bkp = os.path.join(self.config['managesf']['backup_dir'],
                            'sf_backup.tar.gz')
         file(bkp, 'w').write('backup content')
-        response = self.app.get('/backup', status="*")
-        self.assertEqual(response.body, 'backup content')
-        os.unlink(bkp)
-        response = self.app.get('/backup', status="*")
-        self.assertEqual(response.status_int, 404)
+        with patch('managesf.controllers.root.is_admin') as is_admin:
+            is_admin.return_value = False
+            response = self.app.get('/backup', status="*")
+            self.assertEqual(response.status_int, 401)
+            is_admin.return_value = True
+            response = self.app.get('/backup', status="*")
+            self.assertEqual(response.body, 'backup content')
+            os.unlink(bkp)
+            response = self.app.get('/backup', status="*")
+            self.assertEqual(response.status_int, 404)
 
     def test_backup_post(self):
         ctx = [patch('managesf.controllers.backup.backup_start'),
