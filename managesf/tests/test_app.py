@@ -451,18 +451,19 @@ class TestManageSFAppRestoreController(FunctionalTest):
                            'sf_backup.tar.gz')
         files = [('file', 'useless', 'backup content')]
         # restore a provided backup
+        environ = {'REMOTE_USER': self.config['admin']['name']}
         ctx = [patch('managesf.controllers.backup.backup_restore'),
                patch('managesf.controllers.backup.backup_unpack'),
-               patch.object(BackupManager, 'restore'),
-               patch('managesf.controllers.root.is_admin')]
+               patch.object(BackupManager, 'restore')]
         with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore, is_admin):
-            is_admin.return_value = False
+                              restore):
             response = self.app.post('/restore', status="*",
                                      upload_files=files)
             self.assertEqual(response.status_int, 401)
-            is_admin.return_value = True
-            response = self.app.post('/restore', status="*",
+
+            response = self.app.post('/restore',
+                                     extra_environ=environ,
+                                     status="*",
                                      upload_files=files)
             self.assertTrue(os.path.isfile(bkp))
             self.assertTrue(backup_unpack.called)
@@ -472,10 +473,11 @@ class TestManageSFAppRestoreController(FunctionalTest):
             self.assertEqual(response.status_int, 204)
         # restore a provided backup - an error occurs
         with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore, is_admin):
-            is_admin.return_value = True
+                              restore):
             backup_restore.side_effect = raiseexc
-            response = self.app.post('/restore', status="*",
+            response = self.app.post('/restore',
+                                     extra_environ=environ,
+                                     status="*",
                                      upload_files=files)
             self.assertTrue(os.path.isfile(bkp))
             self.assertEqual(response.status_int, 500)
@@ -495,28 +497,31 @@ class TestManageSFAppBackupController(FunctionalTest):
         bkp = os.path.join(self.config['managesf']['backup_dir'],
                            'sf_backup.tar.gz')
         file(bkp, 'w').write('backup content')
-        with patch('managesf.controllers.root.is_admin') as is_admin:
-            is_admin.return_value = False
-            response = self.app.get('/backup', status="*")
-            self.assertEqual(response.status_int, 401)
-            is_admin.return_value = True
-            response = self.app.get('/backup', status="*")
-            self.assertEqual(response.body, 'backup content')
-            os.unlink(bkp)
-            response = self.app.get('/backup', status="*")
-            self.assertEqual(response.status_int, 404)
+
+        response = self.app.get('/backup', status="*")
+        self.assertEqual(response.status_int, 401)
+
+        environ = {'REMOTE_USER': self.config['admin']['name']}
+        response = self.app.get('/backup',
+                                extra_environ=environ,
+                                status="*")
+        self.assertEqual(response.body, 'backup content')
+        os.unlink(bkp)
+        response = self.app.get('/backup',
+                                extra_environ=environ,
+                                status="*")
+        self.assertEqual(response.status_int, 404)
 
     def test_backup_post(self):
         ctx = [patch('managesf.controllers.backup.backup_start'),
-               patch.object(BackupManager,
-                            'backup'),
-               patch('managesf.controllers.root.is_admin'), ]
-        with nested(*ctx) as (backup_start, backup, is_admin):
-            is_admin.return_value = False
+               patch.object(BackupManager, 'backup')]
+        with nested(*ctx) as (backup_start, backup):
             response = self.app.post('/backup', status="*")
             self.assertEqual(response.status_int, 401)
-            is_admin.return_value = True
-            response = self.app.post('/backup', status="*")
+            environ = {'REMOTE_USER': self.config['admin']['name']}
+            response = self.app.post('/backup',
+                                     extra_environ=environ,
+                                     status="*")
             self.assertEqual(response.status_int, 204)
             self.assertEqual(len(dummy_conf.services),
                              len(backup.mock_calls))
@@ -715,13 +720,13 @@ class TestManageSFAppReplicationController(FunctionalTest):
 class TestManageSFPagesController(FunctionalTest):
     def test_unauthenticated(self):
         resp = self.app.get('/pages/p1', status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.post_json('/pages/p1', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.delete('/pages/p1', status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
     def test_authenticated(self):
         env = {'REMOTE_USER': 'user1'}
@@ -783,13 +788,13 @@ class TestManageSFPagesController(FunctionalTest):
 class TestManageSFHtpasswdController(FunctionalTest):
     def test_unauthenticated(self):
         resp = self.app.put_json('/htpasswd/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.get('/htpasswd/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.delete('/htpasswd/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
     def test_authenticated(self):
         env = {'REMOTE_USER': self.config['admin']['name']}
@@ -876,13 +881,13 @@ class TestManageSFSSHConfigController(FunctionalTest):
 
     def test_unauthenticated(self):
         resp = self.app.put_json('/sshconfig/name/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.get('/sshconfig/name/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
         resp = self.app.delete('/sshconfig/name/', {}, status="*")
-        self.assertEqual(resp.status_int, 403)
+        self.assertEqual(resp.status_int, 401)
 
     def test_add_entry(self):
         c2g = 'managesf.controllers.root.SSHConfigController._copy2gerrit'
@@ -943,7 +948,7 @@ class TestManageSFServicesUserController(FunctionalTest):
                  'full_name': 'Jotaro Kujoh', 'username': 'jojo'}
         response = self.app.post_json('/services_users/', infos,
                                       extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 401)
+        self.assertEqual(response.status_int, 403)
 
     def test_add_user_in_backends(self):
         environ = {'REMOTE_USER': self.config['admin']['name']}
@@ -1086,7 +1091,7 @@ class TestManageSFServicesUserController(FunctionalTest):
         params = {'username': 'iggy'}
         response = self.app.delete('/services_users/', params,
                                    extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 401)
+        self.assertEqual(response.status_int, 403)
 
     def test_delete_user_in_backends(self):
         environ = {'REMOTE_USER': self.config['admin']['name']}
