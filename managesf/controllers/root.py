@@ -25,6 +25,8 @@ from pecan.rest import RestController
 from pecan import request, response
 from stevedore import driver
 
+from managesf.controllers.decorators import admin_login_required
+from managesf.controllers.decorators import user_login_required
 from managesf.controllers import backup, localuser, introspection, htp, pages
 from managesf.controllers import SFuser
 from managesf.services import base, gerrit
@@ -193,9 +195,8 @@ class ReplicationController(RestController):
 
 class BackupController(RestController):
     @expose('json')
+    @admin_login_required
     def get(self):
-        if not is_admin(request.remote_user):
-            abort(401)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -205,28 +206,25 @@ class BackupController(RestController):
         return response
 
     @expose('json')
+    @admin_login_required
     def post(self):
-        if not is_admin(request.remote_user):
-            abort(401)
-        else:
-            try:
-                for service in SF_SERVICES:
-                    try:
-                        service.backup.backup()
-                    except exceptions.UnavailableActionError:
-                        msg = '[%s] backup is not an available action'
-                        logger.debug(msg % service.service_name)
-                backup.backup_start()
-                response.status = 204
-            except Exception as e:
-                return report_unhandled_error(e)
+        try:
+            for service in SF_SERVICES:
+                try:
+                    service.backup.backup()
+                except exceptions.UnavailableActionError:
+                    msg = '[%s] backup is not an available action'
+                    logger.debug(msg % service.service_name)
+            backup.backup_start()
+            response.status = 204
+        except Exception as e:
+            return report_unhandled_error(e)
 
 
 class RestoreController(RestController):
     @expose('json')
+    @admin_login_required
     def post(self):
-        if not is_admin(request.remote_user):
-            abort(401)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -502,9 +500,8 @@ class ProjectController(RestController):
 class PagesController(RestController):
 
     @expose('json')
+    @user_login_required
     def post(self, project):
-        if request.remote_user is None:
-            abort(403)
         user = request.remote_user
         code_review = [s for s in SF_SERVICES
                        if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
@@ -532,9 +529,8 @@ class PagesController(RestController):
         return retmsg
 
     @expose('json')
+    @user_login_required
     def get(self, project):
-        if request.remote_user is None:
-            abort(403)
         code_review = [s for s in SF_SERVICES
                        if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
         if not code_review.project.user_owns_project(request.remote_user,
@@ -549,9 +545,8 @@ class PagesController(RestController):
         return ret
 
     @expose('json')
+    @user_login_required
     def delete(self, project):
-        if request.remote_user is None:
-            abort(403)
         user = request.remote_user
         code_review = [s for s in SF_SERVICES
                        if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
@@ -572,11 +567,8 @@ class PagesController(RestController):
 class LocalUserController(RestController):
 
     @expose('json')
+    @user_login_required
     def post(self, username):
-        if request.remote_user is None:
-            # remote_user must be set by auth_pubtkt plugin of apache
-            # if not there we abort !
-            abort(403)
         infos = request.json if request.content_length else {}
         try:
             ret = localuser.update_user(username, infos)
@@ -592,11 +584,8 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
+    @user_login_required
     def get(self, username):
-        if request.remote_user is None:
-            # remote_user must be set by auth_pubtkt plugin of apache
-            # if not there we abort !
-            abort(403)
         try:
             ret = localuser.get_user(username)
         except localuser.GetUserForbidden as e:
@@ -608,11 +597,8 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
+    @user_login_required
     def delete(self, username):
-        if request.remote_user is None:
-            # remote_user must be set by auth_pubtkt plugin of apache
-            # if not there we abort !
-            abort(403)
         try:
             ret = localuser.delete_user(username)
         except localuser.DeleteUserForbidden as e:
@@ -722,10 +708,8 @@ class ServicesUsersController(RestController):
             return report_unhandled_error(e)
 
     @expose('json')
+    @admin_login_required
     def post(self):
-        if not is_admin(request.remote_user):
-            abort(401,
-                  detail='Adding users is limited to administrators')
         infos = request.json if request.content_length else {}
         if not infos or not infos.get('username'):
             abort(400, detail='Incomplete user information: %r' % infos)
@@ -825,17 +809,13 @@ class ServicesUsersController(RestController):
                 logger.debug(msg % service.service_name)
 
     @expose('json')
+    @user_login_required
     def get(self, **kwargs):
-        # Allowed for all authenticated users
-        if request.remote_user is None:
-            abort(403)
         return sfmanager.user.get(**kwargs)
 
     @expose()
+    @admin_login_required
     def delete(self, id=None, email=None, username=None):
-        if not is_admin(request.remote_user):
-            abort(401,
-                  detail='Deleting users is limited to administrators')
         d_id = id
         if not d_id and (email or username):
             logger.debug('[delete] looking for %s %s' % (email, username))
@@ -865,9 +845,8 @@ class HtpasswdController(RestController):
         self.htp = htp.Htpasswd(conf)
 
     @expose('json')
+    @user_login_required
     def put(self):
-        if request.remote_user is None:
-            abort(403)
         try:
             password = self.htp.set_api_password(request.remote_user)
         except IOError:
@@ -876,9 +855,8 @@ class HtpasswdController(RestController):
         return password
 
     @expose('json')
+    @user_login_required
     def get(self):
-        if request.remote_user is None:
-            abort(403)
         response.status = 404
         try:
             if self.htp.user_has_api_password(request.remote_user):
@@ -887,9 +865,8 @@ class HtpasswdController(RestController):
             abort(406)
 
     @expose('json')
+    @user_login_required
     def delete(self):
-        if request.remote_user is None:
-            abort(403)
         try:
             self.htp.delete(request.remote_user)
             response.status = 204
@@ -1005,10 +982,8 @@ class SSHConfigController(RestController):
         return success
 
     @expose('json')
+    @user_login_required
     def put(self, name):
-        if request.remote_user is None:
-            abort(403)
-
         conf = self._read_sshconfig(self.filename)
         conf[name] = request.json if request.content_length else {}
 
@@ -1020,19 +995,13 @@ class SSHConfigController(RestController):
         response.status = 201
 
     @expose('json')
+    @user_login_required
     def get(self, name):
-        if request.remote_user is None:
-            abort(403)
-
-        conf = self._read_sshconfig(self.filename)
-
-        return conf
+        return self._read_sshconfig(self.filename)
 
     @expose('json')
+    @user_login_required
     def delete(self, name):
-        if request.remote_user is None:
-            abort(403)
-
         conf = self._read_sshconfig(self.filename)
         if name in conf:
             id_file = conf.get(name, {}).get('IdentityFile')
@@ -1047,12 +1016,11 @@ class SSHConfigController(RestController):
 class HooksController(RestController):
 
     @expose('json')
+    @user_login_required
     def post(self, hook_name, service_name=None):
         """Trigger hook {hook_name} across all services. If {service_name}
         is set, trigger the hook only for that service."""
         # TODO: maybe we should have a specific user defined to run hooks
-        if request.remote_user is None:
-            abort(403)
         d = request.json if request.content_length else {}
         hooks_feedback = {}
         unavailable_hooks = 0
@@ -1094,9 +1062,8 @@ class HooksController(RestController):
 class TestsController(RestController):
 
     @expose('json')
+    @user_login_required
     def put(self, project_name=''):
-        if request.remote_user is None:
-            abort(403)
         # TODO(mhu) this must be independent from gerrit
         code_review = [s for s in SF_SERVICES
                        if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
