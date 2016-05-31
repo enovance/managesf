@@ -397,6 +397,109 @@ class ProjectController(RestController):
             return report_unhandled_error(e)
 
 
+class GroupController(RestController):
+
+    @user_login_required
+    @expose()
+    def put(self, groupname):
+        infos = request.json if request.content_length else {}
+        desc = infos.get('description', None)
+        try:
+            # TODO: Force action to be executed on Gerrit first
+            for service in SF_SERVICES:
+                try:
+                    if hasattr(service, "group"):
+                        service.group.create(groupname, desc)
+                except exceptions.UnavailableActionError:
+                    msg = '[%s] group create is not an available action'
+                    logger.debug(msg % service.service_name)
+        except exceptions.CreateGroupException, e:
+            # Gerrit is the reference, abort if the group
+            # can't be create in Gerrit
+            if isinstance(service,
+                          base.BaseCodeReviewServicePlugin):
+                abort(409, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+        response.status = 201
+
+    @user_login_required
+    @expose()
+    def post(self, groupname):
+        infos = request.json if request.content_length else {}
+        members = infos.get("members", [])
+        try:
+            # TODO: Force action to be executed on Gerrit first
+            for service in SF_SERVICES:
+                logger.info("AAA %s" % service)
+                try:
+                    if hasattr(service, "group"):
+                        service.group.update(groupname, members)
+                except exceptions.UnavailableActionError:
+                    msg = '[%s] group update is not an available action'
+                    logger.debug(msg % service.service_name)
+        except (exceptions.UpdateGroupException,
+                exceptions.GroupNotFoundException), e:
+            abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+
+    @user_login_required
+    @expose('json')
+    def get(self, groupname):
+        try:
+            for service in SF_SERVICES:
+                # Gerrit is the reference only request it
+                if isinstance(service,
+                              base.BaseCodeReviewServicePlugin):
+                    try:
+                        return service.group.get(groupname)
+                    except exceptions.UnavailableActionError:
+                        msg = '[%s] group get is not an available action'
+                    logger.debug(msg % service.service_name)
+        except exceptions.GroupNotFoundException, e:
+                abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+
+    @user_login_required
+    @expose('json')
+    def get_all(self):
+        try:
+            for service in SF_SERVICES:
+                # Gerrit is the reference only request it
+                if isinstance(service,
+                              base.BaseCodeReviewServicePlugin):
+                    try:
+                        return service.group.get()
+                    except exceptions.UnavailableActionError:
+                        msg = '[%s] group get is not an available action'
+                    logger.debug(msg % service.service_name)
+        except exceptions.GroupNotFoundException, e:
+                abort(404, detail=e.message)
+        except Exception as e:
+            return report_unhandled_error(e)
+
+    @user_login_required
+    @expose()
+    def delete(self, groupname):
+        try:
+            # TODO: Force action to be executed on Gerrit first
+            for service in SF_SERVICES:
+                try:
+                    if hasattr(service, "group"):
+                        if isinstance(service,
+                                      base.BaseCodeReviewServicePlugin):
+                            service.role.delete(groupname)
+                        else:
+                            service.group.delete(groupname)
+                except exceptions.UnavailableActionError:
+                    msg = '[%s] group delet is not an available action'
+                    logger.debug(msg % service.service_name)
+        except Exception as e:
+            return report_unhandled_error(e)
+
+
 class PagesController(RestController):
 
     @expose('json')
@@ -877,6 +980,7 @@ class RootController(object):
     restore = RestoreController()
     user = LocalUserController()
     bind = LocalUserBindController()
+    group = GroupController()
     htpasswd = HtpasswdController()
     about = introspection.IntrospectionController()
     tests = TestsController()
