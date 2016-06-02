@@ -21,8 +21,6 @@ from managesf.services import exceptions as exc
 
 logger = logging.getLogger(__name__)
 
-# TODO: log actions
-
 
 class RedmineGroupManager(base.GroupManager):
 
@@ -32,7 +30,7 @@ class RedmineGroupManager(base.GroupManager):
         logger.info("[%s] create group %s" % (self.plugin.service_name,
                                               groupname))
         if not client.create_group(groupname):
-            raise exc.CreateGroupException("Unable to craete group due "
+            raise exc.CreateGroupException("Unable to create group due "
                                            "to a conflict")
 
     def update(self, groupname, members):
