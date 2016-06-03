@@ -195,7 +195,7 @@ class SFUserCRUD:
                               email=email,
                               fullname=fullname,
                               cauth_id=cid)
-                session.add(user)
+                session.merge(user)
                 session.commit()
                 return user.id
             else:
