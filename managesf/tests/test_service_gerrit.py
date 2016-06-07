@@ -319,14 +319,14 @@ class TestSFGerritMembershipManager(BaseSFGerritService):
             is_admin.return_value = False
             group_exists.return_value = True
             self.gerrit.membership.create('requestor',
-                                          'test_user',
+                                          'test_user@sftests',
                                           'testproject',
                                           ['ptl-group',
                                            'core-group',
                                            'dev-group'])
-            calls = [call('test_user', 'testproject-ptl'),
-                     call('test_user', 'testproject-core'),
-                     call('test_user', 'testproject-dev'), ]
+            calls = [call('test_user@sftests', 'testproject-ptl'),
+                     call('test_user@sftests', 'testproject-core'),
+                     call('test_user@sftests', 'testproject-dev'), ]
             add_group_member.assert_has_calls(calls)
         with nested(*patches) as (get_my_groups_id,
                                   get_group_id,
@@ -338,12 +338,12 @@ class TestSFGerritMembershipManager(BaseSFGerritService):
             is_admin.return_value = False
             group_exists.return_value = True
             self.gerrit.membership.create('requestor',
-                                          'test_user',
+                                          'test_user@sftests',
                                           'testproject',
                                           ['core-group',
                                            'dev-group'])
-            calls = [call('test_user', 'testproject-core'),
-                     call('test_user', 'testproject-dev'), ]
+            calls = [call('test_user@sftests', 'testproject-core'),
+                     call('test_user@sftests', 'testproject-dev'), ]
             add_group_member.assert_has_calls(calls)
         with nested(*patches) as (get_my_groups_id,
                                   get_group_id,
@@ -355,10 +355,10 @@ class TestSFGerritMembershipManager(BaseSFGerritService):
             is_admin.return_value = False
             group_exists.return_value = True
             self.gerrit.membership.create('requestor',
-                                          'test_user',
+                                          'test_user@sftests',
                                           'testproject',
                                           ['dev-group'])
-            calls = [call('test_user', 'testproject-dev'), ]
+            calls = [call('test_user@sftests', 'testproject-dev'), ]
             add_group_member.assert_has_calls(calls)
         # Test a core-dev user
         with nested(*patches) as (get_my_groups_id,
@@ -371,12 +371,12 @@ class TestSFGerritMembershipManager(BaseSFGerritService):
             is_admin.return_value = False
             group_exists.return_value = True
             self.gerrit.membership.create('requestor',
-                                          'test_user',
+                                          'test_user@sftests',
                                           'testproject',
                                           ['core-group',
                                            'dev-group'])
-            calls = [call('test_user', 'testproject-core'),
-                     call('test_user', 'testproject-dev'), ]
+            calls = [call('test_user@sftests', 'testproject-core'),
+                     call('test_user@sftests', 'testproject-dev'), ]
             add_group_member.assert_has_calls(calls)
 
     def test_delete(self):
@@ -408,7 +408,7 @@ class TestSFGerritMembershipManager(BaseSFGerritService):
             group_exists.return_value = True
             get_group_member_id.return_value = 'bogus_id'
             self.gerrit.membership.delete('requestor',
-                                          'test_user',
+                                          'test_user@sftest',
                                           'testproject',
                                           None)
             calls = [call('dev_gid', 'bogus_id'),
