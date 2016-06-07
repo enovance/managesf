@@ -163,9 +163,18 @@ class MembershipController(RestController):
         inp = request.json if request.content_length else {}
         if 'groups' not in inp:
             abort(400)
-        if '@' not in user:
-            response.status = 400
-            return "User must be identified by its email address"
+        is_group = False
+        # Check if user or group exists
+        if not len(sfmanager.user.get(email=user).keys()):
+            # User is unknown so check if it is a group
+            code_review = [s for s in SF_SERVICES
+                           if isinstance(s,
+                                         base.BaseCodeReviewServicePlugin)][0]
+            try:
+                code_review.group.get(user, discard_pgroups=False)
+                is_group = True
+            except exceptions.GroupNotFoundException:
+                abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
         project = _decode_project_name(project)
         try:
@@ -178,8 +187,9 @@ class MembershipController(RestController):
                     msg = '[%s] membership creation is not an available action'
                     logger.debug(msg % service.service_name)
             response.status = 201
-            return "User %s has been added in group(s): %s for project %s" % \
-                (user, ", ".join(inp['groups']), project)
+            return "%s %s has been added in group(s): %s for project %s" % \
+                ("Group" if is_group else "User",
+                 user, ", ".join(inp['groups']), project)
         except Exception as e:
             return report_unhandled_error(e)
 
@@ -187,9 +197,18 @@ class MembershipController(RestController):
     def delete(self, project=None, user=None, group=None):
         if not project or not user:
             abort(400)
-        if '@' not in user:
-            response.status = 400
-            return "User must be identified by its email address"
+        is_group = False
+        # Check if user or group exists
+        if not len(sfmanager.user.get(email=user).keys()):
+            # User is unknown so check if it is a group
+            code_review = [s for s in SF_SERVICES
+                           if isinstance(s,
+                                         base.BaseCodeReviewServicePlugin)][0]
+            try:
+                code_review.group.get(user, discard_pgroups=False)
+                is_group = True
+            except exceptions.GroupNotFoundException:
+                abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
         project = _decode_project_name(project)
         try:
@@ -202,11 +221,15 @@ class MembershipController(RestController):
                     logger.debug(msg % service.service_name)
             response.status = 200
             if group:
-                return ("User %s has been deleted from group %s " +
-                        "for project %s.") % (user, group, project)
+                return ("%s %s has been deleted from group %s " +
+                        "for project %s.") % (
+                            "Group" if is_group else "User",
+                            user, group, project)
             else:
-                return ("User %s has been deleted from all groups " +
-                        "for project %s.") % (user, project)
+                return ("%s %s has been deleted from all groups " +
+                        "for project %s.") % (
+                            "Group" if is_group else "User",
+                            user, project)
         except Exception as e:
             return report_unhandled_error(e)
 
