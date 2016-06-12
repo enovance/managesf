@@ -1487,7 +1487,7 @@ Review: blop
                              len(j))
             self.assertEqual('patchset_created',
                              j['hook_name'])
-            self.assertEqual('Success',
+            self.assertEqual('Issue(s) successfully modified',
                              j['redmine'])
             # oh no ! something went wrong with redmine
             set_issue_status.return_value = False
@@ -1567,7 +1567,8 @@ gitweb: http://redmine.tests.dom/r/gitweb?p=testytest.git;a=commit;h=456
                              len(j))
             self.assertEqual('change_merged',
                              j['hook_name'])
-            self.assertEqual('Success',
+            self.assertEqual('Issue(s) successfully modified\n'
+                             'No XXXImpact, nothing to do.',
                              j['redmine'])
             # oh no ! something went wrong with redmine
             set_issue_status.return_value = False
