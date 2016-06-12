@@ -93,7 +93,7 @@ class TestSFRedmineHooksManager(BaseSFRedmineService):
             self.assertEqual(msg,
                              self.redmine.hooks.patchset_created(**kwargs))
             kwargs['commit_message'] = 'super patch Related-To: #1234'
-            msg = "Success"
+            msg = "Issue(s) successfully modified"
             ticket_msg = """Fix proposed to branch: test_branch by doe
 Review: ccc
 """
@@ -137,11 +137,13 @@ Review: ccc
             kwargs['change_url'] = 'ccc'
             kwargs['submitter'] = 'doe'
             kwargs['commit_message'] = 'super patch'
-            msg = "No issue found in the commit message, nothing to do."
+            msg = "No issue found in the commit message, nothing to do.\n"
+            msg += 'No XXXImpact, nothing to do.'
             self.assertEqual(msg,
                              self.redmine.hooks.change_merged(**kwargs))
             kwargs['commit_message'] = 'super patch Related-To: #1234'
-            msg = "Success"
+            msg = 'Issue(s) successfully modified\n'
+            msg += 'No XXXImpact, nothing to do.'
             ticket_msg = ('The following change on Gerrit has been merged to: '
                           'test_branch\nReview: ccc\nSubmitter: doe\n\nCommit '
                           'message:\nsuper patch Related-To: #1234\n\ngitweb: '
@@ -178,6 +180,33 @@ Review: ccc
             except Exception as e:
                 self.assertEqual(msg,
                                  e.message)
+
+    def test_change_merged_XXXImpact_hook(self):
+        args = ('change', 'change_url', 'project',
+                'branch', 'topic', 'submitter', 'commit')
+        kwargs = dict((k, None) for k in args)
+        with patch.object(RedmineUtils,
+                          'create_issue') as create_issue:
+            create_issue.return_value = 9876
+            kwargs['project'] = 'aaa'
+            kwargs['commit'] = 123
+            kwargs['branch'] = 'test_branch'
+            kwargs['topic'] = 'super_duper'
+            kwargs['change_url'] = 'ccc'
+            kwargs['submitter'] = 'doe'
+            kwargs['commit_message'] = """super patch
+
+Some irrelevant gibberish
+DocImpact"""
+            msg = "No issue found in the commit message, nothing to do.\n"
+            msg += "%sImpact issue #%s created" % ('Doc', 9876)
+            desc = ("This issue was automatically created as a "
+                    "follow-up to merging %s" % kwargs.get('change_url'))
+            self.assertEqual(msg,
+                             self.redmine.hooks.change_merged(**kwargs))
+            create_issue.assert_called_with(kwargs['project'],
+                                            subject='[Doc] super patch',
+                                            description=desc)
 
 
 class TestSFRedmineRoleManager(BaseSFRedmineService):

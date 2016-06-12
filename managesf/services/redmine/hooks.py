@@ -56,6 +56,8 @@ RELATED_ISSUE_REGEX = """(
 :\s+
 \#?(\d+)"""
 RELATED_ISSUE = re.compile(RELATED_ISSUE_REGEX, re.VERBOSE)
+XXXIMPACT_REGEX = """^(\w+)Impact$"""
+XXXIMPACT = re.compile(XXXIMPACT_REGEX, re.VERBOSE | re.UNICODE)
 
 
 def parse_commit_message(message, issue_reg):
@@ -106,7 +108,7 @@ def generic_redmine_hook(kwargs, status_closing, status_related,
     if not related_issue and not closing_issue:
         msg = "No issue found in the commit message, nothing to do."
         return msg
-    return 'Success'
+    return 'Issue(s) successfully modified'
 
 
 class RedmineHooksManager(base.BaseHooksManager):
@@ -134,6 +136,42 @@ class RedmineHooksManager(base.BaseHooksManager):
             raise e
 
     def change_merged(self, *args, **kwargs):
+        a = self._close_patch_ticket(*args, **kwargs)
+        b = self._create_impact_ticket(*args, **kwargs)
+        return '\n'.join((a, b))
+
+    def _create_impact_ticket(self, *args, **kwargs):
+        """Create 'XXXImpact' follow-up ticket."""
+        msg = kwargs.get('commit_message', '')
+        impacts = sum([XXXIMPACT.findall(m) for m in msg.split('\n')
+                       if XXXIMPACT.findall(m)], [])
+        to_return = []
+        # ensure unicity
+        impacts = dict((u, None) for u in impacts).keys()
+        client = self.plugin.get_client()
+        if not impacts:
+            return 'No XXXImpact, nothing to do.'
+        for impact in impacts:
+            issue_title = u"[%s] %s" % (impact, msg.split('\n')[0])
+            desc = ("This issue was automatically created as a "
+                    "follow-up to merging %s" % kwargs.get('change_url'))
+            try:
+                id = client.create_issue(kwargs.get('project'),
+                                         subject=issue_title,
+                                         description=desc)
+                dbg = '%sImpact issue #%s created' % (impact, id)
+                logger.debug('[%s] %s: %s' % (self.plugin.service_name,
+                                              'impact_ticket',
+                                              dbg))
+                to_return.append(dbg)
+            except Exception as e:
+                logger.error('[%s] %s: %s' % (self.plugin.service_name,
+                                              'impact_ticket',
+                                              e.message))
+                to_return.append('%sImpact not created' % impact)
+        return '\n'.join(to_return)
+
+    def _close_patch_ticket(self, *args, **kwargs):
         """Set tickets impacted by the patch to 'Closed' if the patch
         resolves the issue."""
         status_closing = 5
@@ -146,12 +184,12 @@ class RedmineHooksManager(base.BaseHooksManager):
                                        template_message=MERGED,
                                        client=self.plugin.get_client())
             logger.debug('[%s] %s: %s' % (self.plugin.service_name,
-                                          'patchset_created',
+                                          'close_patch_ticket',
                                           msg))
             return msg
         except Exception as e:
             logger.error('[%s] %s: %s' % (self.plugin.service_name,
-                                          'patchset_created',
+                                          'close_patch_ticket',
                                           e.message))
             # re-raise
             raise e
