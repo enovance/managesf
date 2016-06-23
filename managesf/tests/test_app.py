@@ -859,14 +859,19 @@ class TestManageSFServicesUserController(FunctionalTest):
             response = self.app.post_json('/services_users/', infos,
                                           extra_environ=environ, status="*")
             self.assertEqual(response.status_int, 201)
-            redmine_create.assert_called_with(username=infos.get('username'),
-                                              email=infos.get('email'),
-                                              full_name=infos.get('full_name'),
-                                              ssh_keys=infos['ssh_keys'])
-            gerrit_create.assert_called_with(username=infos.get('username'),
-                                             email=infos.get('email'),
-                                             full_name=infos.get('full_name'),
-                                             ssh_keys=infos['ssh_keys'])
+            print infos, environ
+            _, redmine_args = redmine_create.call_args
+            _, gerrit_args = gerrit_create.call_args
+            for k, v in (
+                ("username", infos.get('username')),
+                ("email", infos.get('email')),
+                ("full_name", infos.get('full_name')),
+                ("ssh_keys", infos['ssh_keys'])
+            ):
+                self.assertEqual(redmine_args[k], v)
+                self.assertEqual(gerrit_args[k], v)
+            self.assertTrue("user_id" in redmine_args)
+            self.assertTrue("user_id" in gerrit_args)
             # TODO(mhu) test if mapping is set correctly
         # mock at a lower level
         with nested(*create_ctx) as (get_cookie, rm_create_user, ssh,
