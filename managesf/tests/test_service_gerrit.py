@@ -123,8 +123,8 @@ class TestSFGerritUserManager(BaseSFGerritService):
             get.return_value = self.user_data
             u = self.gerrit.user.get(email='jojo@starplatinum.dom')
             get.assert_called_with('jojo@starplatinum.dom')
-            self.assertEqual('jojo',
-                             u['username'])
+            self.assertEqual(5,
+                             u)
 
     def test_delete(self):
         self.assertRaises(TypeError,

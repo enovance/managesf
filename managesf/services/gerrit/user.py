@@ -113,7 +113,11 @@ class SFGerritUserManager(base.UserManager):
             query = email
         g_client = self.plugin.get_client()
         try:
-            return g_client.get_account(query)
+            account = g_client.get_account(query)
+            if isinstance(account, dict):
+                return account.get('_account_id')
+            else:
+                return account
         except:
             return None
         return None
