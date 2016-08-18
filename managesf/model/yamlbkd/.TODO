@@ -1,0 +1,2 @@
+- Verify at YAML load time that duplicated resources key are not present. To avoid overlapping of resources. https://gist.github.com/pypt/94d747fe5180851196eb
+- Add a primary key mechanism to avoid duplicate resources (eg: project with same namespace and name)
