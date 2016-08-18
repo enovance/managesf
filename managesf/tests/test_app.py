@@ -1756,3 +1756,8 @@ gitweb: http://redmine.tests.dom/r/gitweb?p=testytest.git;a=commit;h=456
                                  j['hook_name'])
                 self.assertEqual("Could not change status of issue #789",
                                  j['redmine'])
+
+class TestResourcesController(FunctionalTest):
+
+    def test_get(self):
+        pass

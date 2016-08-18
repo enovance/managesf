@@ -30,6 +30,7 @@ from managesf.controllers import SFuser
 from managesf.services import base, gerrit
 from managesf.services import exceptions
 from managesf import policy
+from managesf.model.yamlbkd.engine import SFResourceBackendEngine
 
 
 logger = logging.getLogger(__name__)
@@ -1160,6 +1161,43 @@ class ConfigController(RestController):
                                                    target={})
         return permissions
 
+
+class ResourcesController(RestController):
+    @expose('json')
+    def get(self):
+        eng = SFResourceBackendEngine(
+            os.path.join(conf.managesf['r-engine_workdir'], 'read'),
+            conf.managesf['r-engine_subdir'])
+        return eng.get(conf.managesf['r-engine_master-repo'],
+                       'master')
+
+    @expose('json')
+    def post(self, zuul_url, zuul_ref):
+        eng = SFResourceBackendEngine(
+            os.path.join(conf.managesf['r-engine_workdir'], 'read'),
+            conf.managesf['r-engine_subdir'])
+        status, logs = eng.validate(conf.managesf['r-engine_master-repo'],
+                                    'master', zuul_url, zuul_ref)
+        if not status:
+            response.status = 409
+        else:
+            response.status = 200
+        return logs
+
+    @expose('json')
+    def put(self, zuul_url, zuul_ref):
+        eng = SFResourceBackendEngine(
+            os.path.join(conf.managesf['r-engine_workdir'], 'read'),
+            conf.managesf['r-engine_subdir'])
+        status, logs = eng.apply(conf.managesf['r-engine_master-repo'],
+                                 'master', zuul_url, zuul_ref)
+        if not status:
+            response.status = 409
+        else:
+            response.status = 201
+        return logs
+
+
 load_services()
 
 
@@ -1177,3 +1215,4 @@ class RootController(object):
     hooks = HooksController()
     config = ConfigController()
     pages = PagesController()
+    resources = ResourcesController()
