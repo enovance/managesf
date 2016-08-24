@@ -90,6 +90,277 @@ class TestPolicyEngine(TestCase):
         self.assertTrue(policy.authorize('managesf.project:create',
                                          target, credentials))
 
+    def test_hooks_policies(self):
+        """Test the default hooks endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.hooks:trigger',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertFalse(policy.authorize('managesf.hooks:trigger',
+                                          target, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.hooks:trigger',
+                                         target, credentials))
+        credentials = {'username': '_SF_SERVICE_USER_'}
+        self.assertTrue(policy.authorize('managesf.hooks:trigger',
+                                         target, credentials))
+
+    def test_htpasswd_policies(self):
+        """Test the default htpasswd endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.htpasswd:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.htpasswd:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.htpasswd:delete',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertTrue(policy.authorize('managesf.htpasswd:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.htpasswd:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.htpasswd:delete',
+                                         target, credentials))
+
+    def test_pages_policies(self):
+        """Test the default pages endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.pages:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:delete',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': []}
+        self.assertFalse(policy.authorize('managesf.pages:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:delete',
+                                          target, credentials))
+        target = {'project': 'phoenix'}
+        credentials['groups'].append('phoenix-core')
+        self.assertFalse(policy.authorize('managesf.pages:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.pages:delete',
+                                          target, credentials))
+        credentials['groups'].append('phoenix-ptl')
+        self.assertTrue(policy.authorize('managesf.pages:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.pages:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.pages:delete',
+                                         target, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.pages:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.pages:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.pages:delete',
+                                         target, credentials))
+
+    def test_localuser_policies(self):
+        """Test the default localuser endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.localuser:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.localuser:create_update',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.localuser:delete',
+                                          target, credentials))
+        self.assertTrue(policy.authorize('managesf.localuser:bind',
+                                         target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': []}
+        self.assertTrue(policy.authorize('managesf.localuser:get',
+                                         target, credentials))
+        self.assertFalse(policy.authorize('managesf.localuser:create_update',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.localuser:delete',
+                                          target, credentials))
+        self.assertTrue(policy.authorize('managesf.localuser:bind',
+                                         target, credentials))
+        target = {'username': 'RickSanchez'}
+        self.assertTrue(policy.authorize('managesf.localuser:create_update',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.localuser:delete',
+                                         target, credentials))
+        target = {'username': 'Morty'}
+        self.assertFalse(policy.authorize('managesf.localuser:create_update',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.localuser:delete',
+                                          target, credentials))
+        credentials['username'] = 'Morty'
+        self.assertTrue(policy.authorize('managesf.localuser:create_update',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.localuser:delete',
+                                         target, credentials))
+
+    def test_backup_policies(self):
+        """Test the default backup endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.backup:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.backup:get',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertFalse(policy.authorize('managesf.backup:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.backup:get',
+                                          target, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.backup:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.backup:create',
+                                         target, credentials))
+
+    def test_restore_policies(self):
+        """Test the default restore endpoint policies"""
+        credentials = {}
+        target = {}
+        self.assertFalse(policy.authorize('managesf.restore:restore',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertFalse(policy.authorize('managesf.restore:restore',
+                                          target, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.restore:restore',
+                                         target, credentials))
+
+    def test_membership_policies(self):
+        """Test the default membership endpoint policies"""
+        credentials = {}
+        target = {'project': 'p0',
+                  'user': 'Jerry',
+                  'group': 'dev-group'}
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:get',
+                                         {}, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:get',
+                                         {}, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.membership:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:delete',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:get',
+                                         {}, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p0-ptl']}
+        self.assertTrue(policy.authorize('managesf.membership:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:delete',
+                                         target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p1-ptl']}
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p0-core']}
+        target['group'] = 'ptl-group'
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials),
+                         policy._ENFORCER.rules)
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        target['group'] = 'core-group'
+        self.assertTrue(policy.authorize('managesf.membership:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:delete',
+                                         target, credentials))
+        target['group'] = 'dev-group'
+        self.assertTrue(policy.authorize('managesf.membership:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:delete',
+                                         target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p0-dev']}
+        target['group'] = 'ptl-group'
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials),
+                         policy._ENFORCER.rules)
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.membership:create',
+                                          target, credentials),
+                         policy._ENFORCER.rules)
+        self.assertFalse(policy.authorize('managesf.membership:delete',
+                                          target, credentials))
+        target['group'] = 'dev-group'
+        self.assertTrue(policy.authorize('managesf.membership:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.membership:delete',
+                                         target, credentials))
+
+    def test_group_policies(self):
+        """Test the group policies that come with a default deployment"""
+        credentials = {}
+        target = {'group': 'glib-globs'}
+        self.assertFalse(policy.authorize('managesf.group:create',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:delete',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:update',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:get',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:get',
+                                          {}, credentials))
+        credentials = {'username': 'RickSanchez'}
+        self.assertTrue(policy.authorize('managesf.group:create',
+                                         target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:delete',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:update',
+                                          target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:get',
+                                         {}, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.group:create',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:delete',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:update',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:get',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:get',
+                                         {}, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p0-ptl']}
+        self.assertTrue(policy.authorize('managesf.group:create',
+                                         target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:delete',
+                                          target, credentials))
+        self.assertFalse(policy.authorize('managesf.group:update',
+                                          target, credentials))
+        credentials = {'username': 'RickSanchez',
+                       'groups': ['p1-ptl', 'glib-globs']}
+        self.assertTrue(policy.authorize('managesf.group:delete',
+                                         target, credentials))
+        self.assertTrue(policy.authorize('managesf.group:update',
+                                         target, credentials))
+
     def test_default_policies(self):
         """Test the default policies that come with a default deployment"""
         credentials = {}

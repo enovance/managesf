@@ -25,7 +25,6 @@ from pecan.rest import RestController
 from pecan import request, response
 from stevedore import driver
 
-from managesf.controllers.decorators import admin_login_required
 from managesf.controllers.decorators import user_login_required
 from managesf.controllers import backup, localuser, introspection, htp, pages
 from managesf.controllers import SFuser
@@ -105,17 +104,22 @@ def authorize(rule_name, target):
     credentials = {'username': request.remote_user,
                    'groups': []}
     # TODO(mhu) this must be independent from gerrit
-    code_review = [s for s in SF_SERVICES
-                   if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
-    user_groups = code_review.project.get_user_groups(request.remote_user)
-    credentials['groups'] = [grp['name'] for grp in user_groups]
+    if request.remote_user:
+        code_review = [s for s in SF_SERVICES
+                       if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
+        user_groups = code_review.project.get_user_groups(request.remote_user)
+        credentials['groups'] = [grp['name'] for grp in user_groups]
     return policy.authorize(rule_name, target, credentials)
 
 
 class BackupController(RestController):
     @expose('json')
-    @admin_login_required
     def get(self):
+        _policy = 'managesf.backup:get'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -125,8 +129,12 @@ class BackupController(RestController):
         return response
 
     @expose('json')
-    @admin_login_required
     def post(self):
+        _policy = 'managesf.backup:create'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             for service in SF_SERVICES:
                 try:
@@ -142,8 +150,12 @@ class BackupController(RestController):
 
 class RestoreController(RestController):
     @expose('json')
-    @admin_login_required
     def post(self):
+        _policy = 'managesf.restore:restore'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -166,18 +178,38 @@ class RestoreController(RestController):
 class MembershipController(RestController):
     @expose('json')
     def get(self):
+        # TODO this doesn't do what it is expected
+        _policy = 'managesf.membership:get'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         return [(x['username'], x['email'], x['fullname'])
                 for x in sfmanager.user.all()]
 
     @expose('json')
     def put(self, project=None, user=None):
+        _policy = 'managesf.membership:create'
         if not project or not user:
-            abort(400)
+            logger.exception("Missing project (%s) or user (%s)" % (project,
+                                                                    user))
+            abort(400,
+                  detail="Missing project (%s) or user (%s)" % (project,
+                                                                user))
+
+        project = _decode_project_name(project)
         if user:
             user = urllib.unquote_plus(user)
         inp = request.json if request.content_length else {}
         if 'groups' not in inp:
             abort(400)
+        if not all(authorize(_policy,
+                             target={'project': project,
+                                     'user': user,
+                                     'group': g}) for g in inp['groups']):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+
         is_group = False
         # Check if user or group exists
         if not len(sfmanager.user.get(email=user).keys()):
@@ -191,7 +223,6 @@ class MembershipController(RestController):
             except exceptions.GroupNotFoundException:
                 abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
-        project = _decode_project_name(project)
         try:
             # Add/update user for the project groups
             for service in SF_SERVICES:
@@ -210,10 +241,29 @@ class MembershipController(RestController):
 
     @expose('json')
     def delete(self, project=None, user=None, group=None):
+        _policy = 'managesf.membership:delete'
         if not project or not user:
-            abort(400)
+            logger.exception("Missing project (%s) or user (%)s" % (project,
+                                                                    user))
+            abort(400,
+                  detail="Missing project (%s) or user (%s)" % (project,
+                                                                user))
+
+        project = _decode_project_name(project)
         if user:
             user = urllib.unquote_plus(user)
+        if not group:
+            grps = ['ptl-group',
+                    'core-group',
+                    'dev-group', ]
+        else:
+            grps = [group, ]
+        if not all(authorize(_policy,
+                             target={'project': project,
+                                     'user': user,
+                                     'group': g, }) for g in grps):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         is_group = False
         # Check if user or group exists
         if not len(sfmanager.user.get(email=user).keys()):
@@ -227,7 +277,6 @@ class MembershipController(RestController):
             except exceptions.GroupNotFoundException:
                 abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
-        project = _decode_project_name(project)
         try:
             # delete user from all project groups
             for service in SF_SERVICES:
@@ -465,19 +514,15 @@ class GroupController(RestController):
                 sorted_services.append(service)
         return sorted_services
 
-    def check_authorized(self, groupname):
-        # Abort and return Forbidden if requestor is not part of
-        # of the group.
-        user_email = sfmanager.user.get(
-            username=request.remote_user).get('email')
-        ex_members = self.get(groupname)[groupname]
-        if user_email not in [user['email'] for user in ex_members]:
-            abort(403, "Requestor is not part of %s" % groupname)
-
-    @user_login_required
     @expose()
     def put(self, groupname):
+        # TODO put is usually update, post = create, this was mixed here
+        _policy = 'managesf.group:create'
         groupname = urllib.unquote_plus(groupname)
+        if not authorize(_policy,
+                         target={'group': groupname}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         infos = request.json if request.content_length else {}
         desc = infos.get('description', None)
         # Force action to be executed on Gerrit first
@@ -506,17 +551,18 @@ class GroupController(RestController):
                 return report_unhandled_error(e)
             response.status = 201
 
-    @user_login_required
     @expose()
     def post(self, groupname):
+        _policy = 'managesf.group:update'
         groupname = urllib.unquote_plus(groupname)
+        if not authorize(_policy,
+                         target={'group': groupname}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         infos = request.json if request.content_length else {}
         members = infos.get("members", [])
         # Force action to be executed on Gerrit first
         sorted_services = self.sort_services()
-
-        # Be sure the user is part of that group
-        self.check_authorized(groupname)
 
         for service in sorted_services:
             try:
@@ -539,11 +585,17 @@ class GroupController(RestController):
             except Exception as e:
                 return report_unhandled_error(e)
 
-    @user_login_required
     @expose('json')
     def get(self, groupname):
+        _policy = 'managesf.group:get'
+        target = {}
         if groupname:
             groupname = urllib.unquote_plus(groupname)
+            target['group'] = groupname
+        if not authorize(_policy,
+                         target=target):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         for service in SF_SERVICES:
             try:
                 if isinstance(service,
@@ -557,7 +609,6 @@ class GroupController(RestController):
             except Exception as e:
                 return report_unhandled_error(e)
 
-    @user_login_required
     @expose('json')
     def get_all(self):
         return self.get(None)
@@ -565,12 +616,14 @@ class GroupController(RestController):
     @user_login_required
     @expose()
     def delete(self, groupname):
+        _policy = 'managesf.group:delete'
         groupname = urllib.unquote_plus(groupname)
+        if not authorize(_policy,
+                         target={'group': groupname}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         # Force action to be executed on Gerrit first
         sorted_services = self.sort_services()
-
-        # Be sure the user is part of that group
-        self.check_authorized(groupname)
 
         for service in sorted_services:
             try:
@@ -600,14 +653,18 @@ class GroupController(RestController):
 class PagesController(RestController):
 
     @expose('json')
-    @user_login_required
     def post(self, project):
         user = request.remote_user
-        code_review = [s for s in SF_SERVICES
-                       if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
-        if not code_review.project.user_owns_project(request.remote_user,
-                                                     project):
-            abort(403, detail="You are not the project owner")
+        _policy = 'managesf.pages:create'
+        if not project:
+            logger.exception("Project name required")
+            abort(400, detail="Project name required")
+
+        project = _decode_project_name(project)
+        if not authorize(_policy,
+                         target={'project': project}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         infos = request.json if request.content_length else {}
         try:
             ret = pages.update_content_url(project, infos)
@@ -629,13 +686,17 @@ class PagesController(RestController):
         return retmsg
 
     @expose('json')
-    @user_login_required
     def get(self, project):
-        code_review = [s for s in SF_SERVICES
-                       if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
-        if not code_review.project.user_owns_project(request.remote_user,
-                                                     project):
-            abort(403, detail="You are not the project owner")
+        _policy = 'managesf.pages:get'
+        if not project:
+            logger.exception("Project name required")
+            abort(400, detail="Project name required")
+
+        project = _decode_project_name(project)
+        if not authorize(_policy,
+                         target={'project': project}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             ret = pages.get_content_url(project)
         except pages.PageNotFound as e:
@@ -645,14 +706,18 @@ class PagesController(RestController):
         return ret
 
     @expose('json')
-    @user_login_required
     def delete(self, project):
         user = request.remote_user
-        code_review = [s for s in SF_SERVICES
-                       if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
-        if not code_review.project.user_owns_project(request.remote_user,
-                                                     project):
-            abort(403, detail="You are not the project owner")
+        _policy = 'managesf.pages:create'
+        if not project:
+            logger.exception("Project name required")
+            abort(400, detail="Project name required")
+
+        project = _decode_project_name(project)
+        if not authorize(_policy,
+                         target={'project': project}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             pages.delete_content_url(project)
         except pages.PageNotFound as e:
@@ -667,8 +732,12 @@ class PagesController(RestController):
 class LocalUserController(RestController):
 
     @expose('json')
-    @user_login_required
     def post(self, username):
+        _policy = 'managesf.localuser:create_update'
+        if not authorize(_policy,
+                         target={'username': username}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         infos = request.json if request.content_length else {}
         try:
             ret = localuser.update_user(username, infos)
@@ -684,8 +753,12 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
-    @user_login_required
     def get(self, username):
+        _policy = 'managesf.localuser:get'
+        if not authorize(_policy,
+                         target={'username': username}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             ret = localuser.get_user(username)
         except localuser.GetUserForbidden as e:
@@ -697,8 +770,12 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
-    @user_login_required
     def delete(self, username):
+        _policy = 'managesf.localuser:delete'
+        if not authorize(_policy,
+                         target={'username': username}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             ret = localuser.delete_user(username)
         except localuser.DeleteUserForbidden as e:
@@ -714,9 +791,20 @@ class LocalUserBindController(RestController):
 
     @expose('json')
     def get(self):
+        _policy = 'managesf.localuser:bind'
         authorization = request.headers.get('Authorization', None)
         if not authorization:
             abort(401, detail="Authentication header missing")
+        try:
+            username, password = localuser.decode(authorization)
+            username = unicode(username, encoding='utf8')
+        except localuser.DecodeError:
+            abort(401, detail="Wrong authorization header")
+        if not authorize(_policy,
+                         target={'username': username}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+
         try:
             ret = localuser.bind_user(authorization)
         except (localuser.BindForbidden, localuser.UserNotFound) as e:
@@ -773,6 +861,7 @@ class ServicesUsersController(RestController):
 
     @expose('json')
     def put(self, id=None, email=None, username=None):
+        _policy = 'managesf.user:update'
         infos = request.json if request.content_length else {}
         # the JSON payload is only for data to update.
         _email = request.GET.get('email')
@@ -788,10 +877,10 @@ class ServicesUsersController(RestController):
             response.status = 404
             return
         u = _username or sfmanager.user.get(d_id).get('username')
-        if not (is_admin(request.remote_user) or
-                u == request.remote_user):
-            abort(401,
-                  detail='Updates only allowed by self or administrator')
+        if not authorize(_policy,
+                         target={'username': u}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         sanitized = self._remove_non_updatable_fields(infos)
         logger.debug('[update] sanitized request %r to %r' % (infos,
                                                               sanitized))
@@ -810,11 +899,15 @@ class ServicesUsersController(RestController):
             return report_unhandled_error(e)
 
     @expose('json')
-    @admin_login_required
     def post(self):
+        _policy = 'managesf.user:create'
         infos = request.json if request.content_length else {}
         if not infos or not infos.get('username'):
             abort(400, detail=u'Incomplete user information: %r' % infos)
+        if not authorize(_policy,
+                         target={'username': infos.get('username')}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             # In this version we cannot lookup just with cauth_id
             known_user = sfmanager.user.get(username=infos['username'],
@@ -913,13 +1006,21 @@ class ServicesUsersController(RestController):
                 logger.debug(msg % service.service_name)
 
     @expose('json')
-    @user_login_required
     def get(self, **kwargs):
+        _policy = 'managesf.user:get'
+        if not authorize(_policy,
+                         target={'username': kwargs.get('username')}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         return sfmanager.user.get(**kwargs)
 
     @expose()
-    @admin_login_required
     def delete(self, id=None, email=None, username=None):
+        _policy = 'managesf.user:delete'
+        if not authorize(_policy,
+                         target={'username': username}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         d_id = id
         if not d_id and (email or username):
             logger.debug(u'[delete] looking for %s %s' % (email, username))
@@ -949,8 +1050,12 @@ class HtpasswdController(RestController):
         self.htp = htp.Htpasswd(conf)
 
     @expose('json')
-    @user_login_required
     def put(self):
+        _policy = 'managesf.htpasswd:create'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             password = self.htp.set_api_password(request.remote_user)
         except IOError:
@@ -959,8 +1064,12 @@ class HtpasswdController(RestController):
         return password
 
     @expose('json')
-    @user_login_required
     def get(self):
+        _policy = 'managesf.htpasswd:get'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         response.status = 404
         try:
             if self.htp.user_has_api_password(request.remote_user):
@@ -969,8 +1078,12 @@ class HtpasswdController(RestController):
             abort(406)
 
     @expose('json')
-    @user_login_required
     def delete(self):
+        _policy = 'managesf.htpasswd:delete'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             self.htp.delete(request.remote_user)
             response.status = 204
@@ -981,11 +1094,14 @@ class HtpasswdController(RestController):
 class HooksController(RestController):
 
     @expose('json')
-    @user_login_required
     def post(self, hook_name, service_name=None):
         """Trigger hook {hook_name} across all services. If {service_name}
         is set, trigger the hook only for that service."""
-        # TODO: maybe we should have a specific user defined to run hooks
+        _policy = 'managesf.hooks:trigger'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         d = request.json if request.content_length else {}
         hooks_feedback = {}
         unavailable_hooks = 0
