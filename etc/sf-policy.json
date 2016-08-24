@@ -21,5 +21,14 @@
     "managesf.project:get_one": "rule:any",
     "managesf.project:get_all": "rule:any",
     "managesf.project:create": "rule:admin_api",
-    "managesf.project:delete": "rule:admin_api or rule:ptl_api"
+    "managesf.project:delete": "rule:admin_api or rule:ptl_api",
+
+    "managesf.backup:get": "rule:admin_api",
+    "managesf.backup:create": "rule:admin_api",
+
+    "managesf.restore:restore": "rule:admin_api",
+
+    "managesf.membership:get": "rule:authenticated_api",
+    "managesf.membership:create": "rule:admin_api or rule:ptl_api",
+    "managesf.membership:delete": "rule:admin_api or rule:ptl_api",
 }
