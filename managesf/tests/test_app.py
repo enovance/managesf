@@ -103,116 +103,129 @@ class TestManageSFIntrospectionController(FunctionalTest):
 class TestManageSFAppLocaluserController(FunctionalTest):
 
     def test_add_or_update_user(self):
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
-                 'fullname': 'John Doe', 'password': 'secret'}
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 201)
-        infos = {'email': 'john2@tests.dom', 'sshkey': 'sshkey',
-                 'fullname': 'John Doe', 'password': 'bigsecret'}
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 200)
-        infos = {'wrongkey': 'heyhey'}
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 400)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            environ = {'REMOTE_USER': 'admin'}
+            infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
+                     'fullname': 'John Doe', 'password': 'secret'}
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 201)
+            infos = {'email': 'john2@tests.dom', 'sshkey': 'sshkey',
+                     'fullname': 'John Doe', 'password': 'bigsecret'}
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 200)
+            infos = {'wrongkey': 'heyhey'}
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 400)
 
-        # Only admin can add user to that database
-        environ = {'REMOTE_USER': 'boss'}
-        infos = {'email': 'john2@tests.dom', 'sshkey': 'sshkey',
-                 'fullname': 'John Doe 2', 'password': 'secret'}
-        response = self.app.post_json('/user/john2', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 403)
+            # Only admin can add user to that database
+            environ = {'REMOTE_USER': 'boss'}
+            infos = {'email': 'john2@tests.dom', 'sshkey': 'sshkey',
+                     'fullname': 'John Doe 2', 'password': 'secret'}
+            response = self.app.post_json('/user/john2', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 401)
 
     def test_get_user(self):
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
-                 'fullname': 'John Doe', 'password': 'secret'}
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 201)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            environ = {'REMOTE_USER': 'admin'}
+            infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
+                     'fullname': 'John Doe', 'password': 'secret'}
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 201)
 
-        response = self.app.get('/user/john',
-                                extra_environ=environ, status="*")
-        expected = {u'sshkey': u'sshkey',
-                    u'username': u'john',
-                    u'email': u'john@tests.dom',
-                    u'fullname': u'John Doe'}
-        self.assertEqual(response.status_int, 200)
-        self.assertDictEqual(response.json, expected)
+            response = self.app.get('/user/john',
+                                    extra_environ=environ, status="*")
+            expected = {u'sshkey': u'sshkey',
+                        u'username': u'john',
+                        u'email': u'john@tests.dom',
+                        u'fullname': u'John Doe'}
+            self.assertEqual(response.status_int, 200)
+            self.assertDictEqual(response.json, expected)
 
-        response = self.app.get('/user/notexists',
-                                extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 404)
+            response = self.app.get('/user/notexists',
+                                    extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 404)
 
-        environ = {'REMOTE_USER': 'john'}
-        response = self.app.get('/user/john',
-                                extra_environ=environ, status="*")
-        expected = {u'sshkey': u'sshkey',
-                    u'username': u'john',
-                    u'email': u'john@tests.dom',
-                    u'fullname': u'John Doe'}
-        self.assertEqual(response.status_int, 200)
-        self.assertDictEqual(response.json, expected)
+            environ = {'REMOTE_USER': 'john'}
+            response = self.app.get('/user/john',
+                                    extra_environ=environ, status="*")
+            expected = {u'sshkey': u'sshkey',
+                        u'username': u'john',
+                        u'email': u'john@tests.dom',
+                        u'fullname': u'John Doe'}
+            self.assertEqual(response.status_int, 200)
+            self.assertDictEqual(response.json, expected)
 
-        environ = {'REMOTE_USER': 'boss'}
-        response = self.app.get('/user/john',
-                                extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 403)
+            environ = {'REMOTE_USER': 'boss'}
+            response = self.app.get('/user/john',
+                                    extra_environ=environ, status="*")
+            expected = {u'sshkey': u'sshkey',
+                        u'username': u'john',
+                        u'email': u'john@tests.dom',
+                        u'fullname': u'John Doe'}
+            self.assertEqual(response.status_int, 200)
+            self.assertDictEqual(response.json, expected)
 
     def test_delete_user(self):
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
-                 'fullname': 'John Doe', 'password': 'secret'}
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 201)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            environ = {'REMOTE_USER': 'admin'}
+            infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
+                     'fullname': 'John Doe', 'password': 'secret'}
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 201)
 
-        environ = {'REMOTE_USER': 'boss'}
-        response = self.app.delete('/user/john',
-                                   extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 403)
+            environ = {'REMOTE_USER': 'boss'}
+            response = self.app.delete('/user/john',
+                                       extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 401)
 
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        response = self.app.delete('/user/john',
-                                   extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 200)
-        response = self.app.get('/user/john',
-                                extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 404)
+            environ = {'REMOTE_USER': 'admin'}
+            response = self.app.delete('/user/john',
+                                       extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 200)
+            response = self.app.get('/user/john',
+                                    extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 404)
 
     def test_bind_user(self):
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        base_infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
-                      'fullname': 'John Doe', }
-        infos = {'password': 'secret'}
-        public_infos = {'username': 'john'}
-        infos.update(base_infos)
-        public_infos.update(base_infos)
-        response = self.app.post_json('/user/john', infos,
-                                      extra_environ=environ, status="*")
-        self.assertEqual(response.status_int, 201)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            environ = {'REMOTE_USER': 'admin'}
+            base_infos = {'email': 'john@tests.dom', 'sshkey': 'sshkey',
+                          'fullname': 'John Doe', }
+            infos = {'password': 'secret'}
+            public_infos = {'username': 'john'}
+            infos.update(base_infos)
+            public_infos.update(base_infos)
+            response = self.app.post_json('/user/john', infos,
+                                          extra_environ=environ, status="*")
+            self.assertEqual(response.status_int, 201)
 
-        headers = {"Authorization": encode("john", "secret")}
-        response = self.app.get('/bind', headers=headers,
-                                status="*")
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual(public_infos,
-                         response.json,
-                         response.json)
+            headers = {"Authorization": encode("john", "secret")}
+            response = self.app.get('/bind', headers=headers,
+                                    status="*")
+            self.assertEqual(response.status_int, 200)
+            self.assertEqual(public_infos,
+                             response.json,
+                             response.json)
 
-        headers = {"Authorization": encode("john", "badsecret")}
-        response = self.app.get('/bind', headers=headers,
-                                status="*")
-        self.assertEqual(response.status_int, 401)
+            headers = {"Authorization": encode("john", "badsecret")}
+            response = self.app.get('/bind', headers=headers,
+                                    status="*")
+            self.assertEqual(response.status_int, 401)
 
-        headers = {"Authorization": encode("boss", "secret")}
-        response = self.app.get('/bind', headers=headers,
-                                status="*")
-        self.assertEqual(response.status_int, 401)
+            headers = {"Authorization": encode("boss", "secret")}
+            response = self.app.get('/bind', headers=headers,
+                                    status="*")
+            self.assertEqual(response.status_int, 401)
 
 
 def project_get(*args, **kwargs):
@@ -499,12 +512,14 @@ class TestManageSFAppRestoreController(FunctionalTest):
                            'sf_backup.tar.gz')
         files = [('file', 'useless', 'backup content')]
         # restore a provided backup
-        environ = {'REMOTE_USER': self.config['admin']['name']}
+        environ = {'REMOTE_USER': 'admin'}
         ctx = [patch('managesf.controllers.backup.backup_restore'),
                patch('managesf.controllers.backup.backup_unpack'),
-               patch.object(BackupManager, 'restore')]
+               patch.object(BackupManager, 'restore'),
+               patch.object(SFGerritProjectManager, 'get_user_groups')]
         with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore):
+                              restore, gug):
+            gug.return_value = []
             response = self.app.post('/restore', status="*",
                                      upload_files=files)
             self.assertEqual(response.status_int, 401)
@@ -521,7 +536,8 @@ class TestManageSFAppRestoreController(FunctionalTest):
             self.assertEqual(response.status_int, 204)
         # restore a provided backup - an error occurs
         with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore):
+                              restore, gug):
+            gug.return_value = []
             backup_restore.side_effect = raiseexc
             response = self.app.post('/restore',
                                      extra_environ=environ,
@@ -545,28 +561,31 @@ class TestManageSFAppBackupController(FunctionalTest):
         bkp = os.path.join(self.config['managesf']['backup_dir'],
                            'sf_backup.tar.gz')
         file(bkp, 'w').write('backup content')
-
-        response = self.app.get('/backup', status="*")
-        self.assertEqual(response.status_int, 401)
-
-        environ = {'REMOTE_USER': self.config['admin']['name']}
-        response = self.app.get('/backup',
-                                extra_environ=environ,
-                                status="*")
-        self.assertEqual(response.body, 'backup content')
-        os.unlink(bkp)
-        response = self.app.get('/backup',
-                                extra_environ=environ,
-                                status="*")
-        self.assertEqual(response.status_int, 404)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            response = self.app.get('/backup', status="*")
+            self.assertEqual(response.status_int, 401)
+            # TODO policies don't play nice with the test admin user
+            environ = {'REMOTE_USER': 'admin'}
+            response = self.app.get('/backup',
+                                    extra_environ=environ,
+                                    status="*")
+            self.assertEqual(response.body, 'backup content')
+            os.unlink(bkp)
+            response = self.app.get('/backup',
+                                    extra_environ=environ,
+                                    status="*")
+            self.assertEqual(response.status_int, 404)
 
     def test_backup_post(self):
         ctx = [patch('managesf.controllers.backup.backup_start'),
-               patch.object(BackupManager, 'backup')]
-        with nested(*ctx) as (backup_start, backup):
+               patch.object(BackupManager, 'backup'),
+               patch.object(SFGerritProjectManager, 'get_user_groups')]
+        with nested(*ctx) as (backup_start, backup, gug):
+            gug.return_value = []
             response = self.app.post('/backup', status="*")
             self.assertEqual(response.status_int, 401)
-            environ = {'REMOTE_USER': self.config['admin']['name']}
+            environ = {'REMOTE_USER': 'admin'}
             response = self.app.post('/backup',
                                      extra_environ=environ,
                                      status="*")
@@ -588,12 +607,14 @@ class TestManageSFAppMembershipController(FunctionalTest):
                patch.object(g_user.SFGerritUserManager, 'create'),
                patch.object(SFRedmineUserManager, 'get'),
                patch.object(StoryboardUserManager, 'get'),
-               patch.object(g_user.SFGerritUserManager, 'get'), ]
+               patch.object(g_user.SFGerritUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups'), ]
         with nested(*ctx) as (redmine_create, sb_create, gerrit_create,
-                              r_get, s_get, g_get, ):
+                              r_get, s_get, g_get, gug, ):
             r_get.return_value = None
             s_get.return_value = None
             g_get.return_value = None
+            gug.return_value = []
             for x in range(10):
                 redmine_create.return_value = x
                 gerrit_create.return_value = x
@@ -602,35 +623,52 @@ class TestManageSFAppMembershipController(FunctionalTest):
                                               extra_environ=environ,
                                               status="*")
                 self.assertEqual(response.status_int, 201)
-            user_list = self.app.get('/project/membership/', status="*").json
+            user_list = self.app.get('/project/membership/', status="*")
+            try:
+                user_list = user_list.json
+            except:
+                raise Exception(user_list)
             for u in users:
                 u_info = [u['username'], u['email'], u['full_name']]
                 self.assertTrue(u_info in user_list,
                                 '%s not in %s' % (u_info, user_list))
 
     def test_put_empty_values(self):
-        response = self.app.put_json('/project/membership/', {}, status="*")
-        self.assertEqual(response.status_int, 400)
-        response = self.app.put_json('/project/p1/membership/', {}, status="*")
-        self.assertEqual(response.status_int, 400)
-        response = self.app.put_json('/project/p1/membership/john', {},
-                                     status="*")
-        self.assertEqual(response.status_int, 400)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            environ = {'REMOTE_USER': 'admin'}
+            response = self.app.put_json('/project/membership/', {},
+                                         status="*",
+                                         extra_environ=environ)
+            self.assertEqual(response.status_int, 400)
+            response = self.app.put_json('/project/p1/membership/', {},
+                                         status="*",
+                                         extra_environ=environ)
+            self.assertEqual(response.status_int, 400)
+            response = self.app.put_json('/project/p1/membership/john', {},
+                                         status="*",
+                                         extra_environ=environ)
+            self.assertEqual(response.status_int, 400)
 
     def test_put(self):
         ctx = [patch.object(SFRedmineMembershipManager,
                             'create'),
                patch.object(SFGerritMembershipManager,
                             'create'),
-               patch.object(SFUserManager, 'get')]
-        with nested(*ctx) as (gaupg, raupg, c):
+               patch.object(SFUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups')]
+        environ = {'REMOTE_USER': 'totally_not_an_admin'}
+        with nested(*ctx) as (gaupg, raupg, c, gug):
             c.return_value = {'email': 'john@tests.dom'}
+            gug.return_value = [{'name': 'p1-ptl'}, ]
             project_name = '===' + base64.urlsafe_b64encode('p1')
             response = self.app.put_json(
                 '/project/%s/membership/john@tests.dom' % project_name,
                 {'groups': ['ptl-group', 'core-group']},
-                status="*")
-            self.assertEqual(response.status_int, 201)
+                status="*",
+                extra_environ=environ)
+            self.assertEqual(201, response.status_int,
+                             response)
             self.assertEqual(json.loads(response.body),
                              "User john@tests.dom has been added in group(s):"
                              " ptl-group, core-group for project p1")
@@ -639,13 +677,16 @@ class TestManageSFAppMembershipController(FunctionalTest):
                             side_effect=raiseexc),
                patch.object(SFRedmineMembershipManager,
                             'create'),
-               patch.object(SFUserManager, 'get')]
-        with nested(*ctx) as (gaupg, raupg, c):
+               patch.object(SFUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups')]
+        with nested(*ctx) as (gaupg, raupg, c, gug):
             c.return_value = {'email': 'john@tests.dom'}
+            gug.return_value = [{'name': 'p1-ptl'}, ]
             response = self.app.put_json(
                 '/project/p1/membership/john@tests.dom',
                 {'groups': ['ptl-group', 'core-group']},
-                status="*")
+                status="*",
+                extra_environ=environ)
             self.assertEqual(response.status_int, 500)
             self.assertEqual(json.loads(response.body),
                              'Unable to process your request, failed '
@@ -658,14 +699,18 @@ class TestManageSFAppMembershipController(FunctionalTest):
         def err(*args, **kwargs):
             raise Exception
 
+        environ = {'REMOTE_USER': 'just_a_dude'}
         project_name = '===' + base64.urlsafe_b64encode('p1')
         ctx = [patch.object(SFGerritGroupManager, 'get'),
-               patch.object(SFUserManager, 'get')]
-        with nested(*ctx) as (a, b):
+               patch.object(SFUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups'), ]
+        with nested(*ctx) as (a, b, gug):
             b.return_value = {}
             a.side_effect = notfound
+            gug.return_value = [{'name': 'p1-ptl'}, ]
             response = self.app.delete('/project/%s/membership/john' % (
-                                       project_name), status="*")
+                                       project_name), status="*",
+                                       extra_environ=environ)
             self.assertEqual(response.status_int, 400)
         ctx = [
             patch.object(SFGerritMembershipManager,
@@ -673,24 +718,29 @@ class TestManageSFAppMembershipController(FunctionalTest):
             patch.object(SFRedmineMembershipManager,
                          'delete'),
             patch.object(SFUserManager, 'get'),
-            patch.object(SFGerritGroupManager, 'get')]
-        with nested(*ctx) as (gdupg, rdupg, c, d):
+            patch.object(SFGerritGroupManager, 'get'),
+            patch.object(SFGerritProjectManager, 'get_user_groups'), ]
+        with nested(*ctx) as (gdupg, rdupg, c, d, gug):
             c.return_value = {}
+            gug.return_value = [{'name': 'p1-ptl'}, ]
             response = self.app.delete(
                 '/project/p1/membership/grp1',
-                status="*")
+                status="*",
+                extra_environ=environ)
             self.assertEqual(response.status_int, 200)
             c.return_value = {'email': 'john@tests.dom'}
             response = self.app.delete(
                 '/project/p1/membership/john@tests.dom',
-                status="*")
+                status="*",
+                extra_environ=environ)
             self.assertEqual(response.status_int, 200)
             self.assertEqual(json.loads(response.body),
                              "User john@tests.dom has been deleted from all "
                              "groups for project p1.")
             response = self.app.delete(
                 '/project/p1/membership/john@tests.dom/core-group',
-                status="*")
+                status="*",
+                extra_environ=environ)
             self.assertEqual(response.status_int, 200)
             self.assertEqual(json.loads(response.body),
                              "User john@tests.dom has been deleted from group "
@@ -702,12 +752,15 @@ class TestManageSFAppMembershipController(FunctionalTest):
             patch.object(SFRedmineMembershipManager,
                          'delete'),
             patch.object(SFUserManager, 'get'),
-            patch.object(SFGerritGroupManager, 'get')]
-        with nested(*ctx) as (gdupg, rdupg, c, d):
+            patch.object(SFGerritGroupManager, 'get'),
+            patch.object(SFGerritProjectManager, 'get_user_groups'), ]
+        with nested(*ctx) as (gdupg, rdupg, c, d, gug):
             c.return_value = {'email': 'john@tests.dom'}
+            gug.return_value = [{'name': 'p1-ptl'}, ]
             response = self.app.delete(
                 '/project/p1/membership/john@tests.dom',
-                status="*")
+                status="*",
+                extra_environ=environ)
             self.assertEqual(response.status_int, 500)
             self.assertEqual(json.loads(response.body),
                              'Unable to process your request, failed '
@@ -729,8 +782,10 @@ class TestGroupController(FunctionalTest):
         env = {'REMOTE_USER': 'user1'}
         ctx = [patch.object(SFGerritGroupManager, 'create'),
                patch.object(RedmineGroupManager, 'create'),
-               patch.object(SFUserManager, 'get')]
-        with nested(*ctx) as (sgm, rgm, sfum):
+               patch.object(SFUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups'), ]
+        with nested(*ctx) as (sgm, rgm, sfum, gug):
+            gug.return_value = []
             sfum.return_value = {'email': "user1@sftests.com"}
             resp = self.app.put_json('/group/grp1',
                                      {'description': 'Nice dev team'},
@@ -741,9 +796,10 @@ class TestGroupController(FunctionalTest):
             rgm.assert_called_with('grp1', 'user1@sftests.com',
                                    'Nice dev team')
         self.assertEqual(resp.status_int, 201)
-        with nested(*ctx) as (sgm, rgm, sfum):
+        with nested(*ctx) as (sgm, rgm, sfum, gug):
             sgm.side_effect = self.exc1
             sfum.return_value = {'email': "user1@sftests.com"}
+            gug.return_value = []
             resp = self.app.put_json('/group/grp1',
                                      {'description': 'Nice dev team'},
                                      extra_environ=env,
@@ -752,9 +808,10 @@ class TestGroupController(FunctionalTest):
                                    'Nice dev team')
             rgm.assert_not_called()
         self.assertEqual(resp.status_int, 409)
-        with nested(*ctx) as (sgm, rgm, sfum):
+        with nested(*ctx) as (sgm, rgm, sfum, gug):
             rgm.side_effect = self.exc1
             sfum.return_value = {'email': "user1@sftests.com"}
+            gug.return_value = []
             resp = self.app.put_json('/group/grp1',
                                      {'description': 'Nice dev team'},
                                      extra_environ=env,
@@ -772,19 +829,22 @@ class TestGroupController(FunctionalTest):
         ctx = [patch.object(SFGerritRoleManager, 'delete'),
                patch.object(RedmineGroupManager, 'delete'),
                patch.object(SFGerritGroupManager, 'get'),
-               patch.object(SFUserManager, 'get')]
-        with nested(*ctx) as (srm, rgm, sgg, sfum):
+               patch.object(SFUserManager, 'get'),
+               patch.object(SFGerritProjectManager, 'get_user_groups'), ]
+        with nested(*ctx) as (srm, rgm, sgg, sfum, gug):
             sgg.return_value = {'grp1': [{'email': 'user1@sftests.com'}]}
+            gug.return_value = [{'name': 'grp2'}, ]
             resp = self.app.delete('/group/grp1',
                                    extra_environ=env,
                                    status="*")
             srm.assert_not_called()
             rgm.assert_not_called()
         # user is not part of the group
-        self.assertEqual(resp.status_int, 403)
-        with nested(*ctx) as (srm, rgm, sgg, sfum):
+        self.assertEqual(resp.status_int, 401)
+        with nested(*ctx) as (srm, rgm, sgg, sfum, gug):
             sfum.return_value = {'email': 'user1@sftests.com'}
             sgg.return_value = {'grp1': [{'email': 'user1@sftests.com'}]}
+            gug.return_value = [{'name': 'grp1'}, ]
             resp = self.app.delete('/group/grp1',
                                    extra_environ=env,
                                    status="*")
@@ -795,47 +855,51 @@ class TestGroupController(FunctionalTest):
 
     def test_get_group(self):
         env = {'REMOTE_USER': 'user1'}
-        with patch.object(SFGerritGroupManager, 'get') as sgg:
+        ctx = [patch.object(SFGerritProjectManager, 'get_user_groups'),
+               patch.object(SFGerritGroupManager, 'get'), ]
+        with nested(*ctx) as (gug, sgg):
             sgg.return_value = {'grp1': [{'email': 'user1@sftests.com'}]}
+            gug.return_value = [{'name': 'grp1'}, ]
             resp = self.app.get('/group/grp1',
                                 extra_environ=env,
                                 status="*")
-            sgg.assert_called_with('grp1')
         self.assertEqual(resp.status_int, 200)
         self.assertDictEqual(resp.json, sgg.return_value)
 
-        with patch.object(SFGerritGroupManager, 'get') as sgg:
+        with nested(*ctx) as (gug, sgg):
             sgg.return_value = {'grp1': [{'email': 'user1@sftests.com'}],
                                 'grp2': [{'email': 'user2@sftests.com'}]}
+            gug.return_value = [{'name': 'grp1'}, {'name': 'grp2'}, ]
             resp = self.app.get('/group/',
                                 extra_environ=env,
                                 status="*")
-            sgg.assert_called_with(None)
         self.assertEqual(resp.status_int, 200)
         self.assertDictEqual(resp.json, sgg.return_value)
 
 
 class TestManageSFPagesController(FunctionalTest):
     def test_unauthenticated(self):
-        resp = self.app.get('/pages/p1', status="*")
-        self.assertEqual(resp.status_int, 401)
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = []
+            resp = self.app.get('/pages/p1', status="*")
+            self.assertEqual(resp.status_int, 401)
 
-        resp = self.app.post_json('/pages/p1', {}, status="*")
-        self.assertEqual(resp.status_int, 401)
+            resp = self.app.post_json('/pages/p1', {}, status="*")
+            self.assertEqual(resp.status_int, 401)
 
-        resp = self.app.delete('/pages/p1', status="*")
-        self.assertEqual(resp.status_int, 401)
+            resp = self.app.delete('/pages/p1', status="*")
+            self.assertEqual(resp.status_int, 401)
 
     def test_authenticated(self):
         env = {'REMOTE_USER': 'user1'}
-        with patch.object(SFGerritProjectManager, 'user_owns_project') as uop:
-            uop.return_value = False
+        with patch.object(SFGerritProjectManager, 'get_user_groups') as gug:
+            gug.return_value = [{'name': 'p2-dev'}, ]
             resp = self.app.post_json('/pages/p1', {'url': 'http://target'},
                                       extra_environ=env, status="*")
-            self.assertEqual(resp.status_int, 403)
+            self.assertEqual(resp.status_int, 401)
 
-            # Now user1 is the project onwer
-            uop.return_value = True
+            # Now user1 is a project PTL
+            gug.return_value = [{'name': 'p1-ptl'}, {'name': 'p2-ptl'}, ]
             resp = self.app.post_json('/pages/p1', {'url': 'http://target'},
                                       extra_environ=env, status="*")
             self.assertEqual(resp.status_int, 201)
@@ -853,23 +917,23 @@ class TestManageSFPagesController(FunctionalTest):
             resp = self.app.get('/pages/p2',
                                 extra_environ=env, status="*")
             self.assertEqual(resp.json, 'http://target2')
-            uop.return_value = False
+            gug.return_value = [{'name': 'p2-dev'}, ]
             resp = self.app.get('/pages/p1',
                                 extra_environ=env, status="*")
-            self.assertEqual(resp.status_int, 403)
+            self.assertEqual(resp.status_int, 401)
 
             # Try to add an invalid target
-            uop.return_value = True
+            gug.return_value = [{'name': 'p3-ptl'}, ]
             resp = self.app.post_json('/pages/p3', {'url': 'invalid'},
                                       extra_environ=env, status="*")
             self.assertEqual(resp.status_int, 400)
 
             # Try to delete a target
-            uop.return_value = False
+            gug.return_value = [{'name': 'p2-dev'}, ]
             resp = self.app.delete('/pages/p1',
                                    extra_environ=env, status="*")
-            self.assertEqual(resp.status_int, 403)
-            uop.return_value = True
+            self.assertEqual(resp.status_int, 401)
+            gug.return_value = [{'name': 'p1-ptl'}, {'name': 'p2-ptl'}, ]
             resp = self.app.delete('/pages/p1',
                                    extra_environ=env, status="*")
             self.assertEqual(resp.status_int, 200)
@@ -877,7 +941,8 @@ class TestManageSFPagesController(FunctionalTest):
                                    extra_environ=env, status="*")
             self.assertEqual(resp.status_int, 200)
 
-            # Trye to delete a non existing target
+            # Try to delete a non existing target
+            gug.return_value = [{'name': 'p3-ptl'}, ]
             resp = self.app.delete('/pages/p3',
                                    extra_environ=env, status="*")
             self.assertEqual(resp.status_int, 404)
