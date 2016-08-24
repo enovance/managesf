@@ -114,8 +114,12 @@ def authorize(rule_name, target):
 
 class BackupController(RestController):
     @expose('json')
-    @admin_login_required
     def get(self):
+        _policy = 'managesf.backup:get'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -125,8 +129,12 @@ class BackupController(RestController):
         return response
 
     @expose('json')
-    @admin_login_required
     def post(self):
+        _policy = 'managesf.backup:create'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         try:
             for service in SF_SERVICES:
                 try:
@@ -142,8 +150,12 @@ class BackupController(RestController):
 
 class RestoreController(RestController):
     @expose('json')
-    @admin_login_required
     def post(self):
+        _policy = 'managesf.restore:restore'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         filepath = os.path.join(conf.managesf.get('backup_dir',
                                                   '/var/www/managesf/'),
                                 'sf_backup.tar.gz')
@@ -166,15 +178,33 @@ class RestoreController(RestController):
 class MembershipController(RestController):
     @expose('json')
     def get(self):
+        # TODO this doesn't do what it is expected
+        _policy = 'managesf.membership:get'
+        if not authorize(_policy,
+                         target={}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         return [(x['username'], x['email'], x['fullname'])
                 for x in sfmanager.user.all()]
 
     @expose('json')
     def put(self, project=None, user=None):
+        _policy = 'managesf.membership:create'
         if not project or not user:
-            abort(400)
+            logger.exception("Missing project (%s) or user (%s)" % (project,
+                                                                    user))
+            abort(400,
+                  detail="Missing project (%s) or user (%s)" % (project,
+                                                                user))
+
+        project = _decode_project_name(project)
         if user:
             user = urllib.unquote_plus(user)
+        if not authorize(_policy,
+                         target={'project': project,
+                                 'user': user}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         inp = request.json if request.content_length else {}
         if 'groups' not in inp:
             abort(400)
@@ -191,7 +221,6 @@ class MembershipController(RestController):
             except exceptions.GroupNotFoundException:
                 abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
-        project = _decode_project_name(project)
         try:
             # Add/update user for the project groups
             for service in SF_SERVICES:
@@ -210,10 +239,22 @@ class MembershipController(RestController):
 
     @expose('json')
     def delete(self, project=None, user=None, group=None):
+        _policy = 'managesf.membership:delete'
         if not project or not user:
-            abort(400)
+            logger.exception("Missing project (%s) or user (%)s" % (project,
+                                                                    user))
+            abort(400,
+                  detail="Missing project (%s) or user (%s)" % (project,
+                                                                user))
+
+        project = _decode_project_name(project)
         if user:
             user = urllib.unquote_plus(user)
+        if not authorize(_policy,
+                         target={'project': project,
+                                 'user': user}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
         is_group = False
         # Check if user or group exists
         if not len(sfmanager.user.get(email=user).keys()):
@@ -227,7 +268,6 @@ class MembershipController(RestController):
             except exceptions.GroupNotFoundException:
                 abort(400, "The user or group to add wasn't found")
         requestor = request.remote_user
-        project = _decode_project_name(project)
         try:
             # delete user from all project groups
             for service in SF_SERVICES:
