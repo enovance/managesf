@@ -25,6 +25,11 @@ class UnavailableActionError(Exception):
     pass
 
 
+class NotImplementedError(Exception):
+    """Raised if a service does not support an action"""
+    pass
+
+
 class Unauthorized(Exception):
     """Raised if an action is unauthorized on the service"""
     pass

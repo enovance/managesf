@@ -43,7 +43,7 @@ class BaseHooksManager(object):
         'branch', 'topic', 'uploader', 'commit', 'patchset',
         'commit_message'
         (The last one will be computed by the local hook script)"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def change_merged(self, *args, **kwargs):
         """Called whenever a new patch is merged into a project's master
@@ -51,14 +51,12 @@ class BaseHooksManager(object):
         'change', 'change_url', 'project',
         'branch', 'topic', 'submitter', 'commit', 'commit_message'
         (The last one will be computed by the local hook script)"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def __getattr__(self, hook):
         """Generic behavior for undefined hooks"""
         def _generic_hook(*args, **kwargs):
-            msg = "[%s] undefined hook %s" % (self.plugin.service_name,
-                                              hook)
-            raise exc.UnavailableActionError(msg)
+            raise exc.NotImplementedError()
         return _generic_hook
 
 
@@ -69,19 +67,19 @@ class BaseCRUDManager(object):
 
     def create(self, *args, **kwargs):
         """Creation operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def get(self, *args, **kwargs):
         """Fetching operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def update(self, *args, **kwargs):
         """Update operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def delete(self, *args, **kwargs):
         """Deletion operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -105,7 +103,7 @@ class UserManager(BaseCRUDManager):
 
     def update(self, uid, *args, **kwargs):
         """Update operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -123,7 +121,7 @@ class GroupManager(BaseCRUDManager):
 
     def update(self, uid, *args, **kwargs):
         """Update operation"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -144,7 +142,7 @@ class ReplicationManager(BaseCRUDManager):
 
     def trigger(self, **kwargs):
         """Trigger a replication"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -178,10 +176,10 @@ class BackupManager(BaseCRUDManager):
         return self.update(**kwargs)
 
     def create(self, **kwargs):
-        raise NotImplementedError
+        raise exc.NotImplementedErrorError
 
     def delete(self, **kwargs):
-        raise NotImplementedError
+        raise exc.NotImplementedErrorError
 
     def check_for_service(self):
         attempt = 0
@@ -221,11 +219,11 @@ class CodeReviewManager(BaseCRUDManager):
 
     def propose_test_definition(self, **kwargs):
         """creates a review adding tests in the zuul pipelines for a project"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
     def propose_test_scripts(self, **kwargs):
         """creates a review for template tests scripts on a project"""
-        raise exc.UnavailableActionError()
+        raise exc.NotImplementedError()
 
 
 @six.add_metaclass(abc.ABCMeta)

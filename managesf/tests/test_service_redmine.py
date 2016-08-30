@@ -68,7 +68,7 @@ class TestSFRedmineGetAPIKey(BaseSFRedmineService):
 
 class TestSFRedmineHooksManager(BaseSFRedmineService):
     def test_hooks_are_present(self):
-        self.assertRaises(exc.UnavailableActionError,
+        self.assertRaises(exc.NotImplementedError,
                           self.redmine.hooks.just_a_random_hook,
                           'dummy arg')
 

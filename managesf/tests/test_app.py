@@ -1084,7 +1084,7 @@ class TestManageSFServicesUserController(FunctionalTest):
                               r_get, s_get, g_get, ):
             # assert that raising UnavailableActionError won't fail
             def unavailable(*args, **kwargs):
-                raise exc.UnavailableActionError
+                raise exc.NotImplementedError
             redmine_create.side_effect = unavailable
             r_get.side_effect = unavailable
             s_get.side_effect = unavailable
@@ -1444,8 +1444,7 @@ class TestHooksController(FunctionalTest):
                                   extra_environ=environ, status="*")
         self.assertEqual(404, resp.status_int)
         j = json.loads(resp.body)
-        self.assertEqual(len(self.config['services']) + 1,
-                         len(j))
+        self.assertEqual(1, len(j))
 
     def test_non_existing_service(self):
         environ = {'REMOTE_USER': self.config['admin']['name']}
@@ -1482,9 +1481,8 @@ Review: blop
                                                 2,
                                                 message=issue_msg)
             j = json.loads(resp.body)
-            # +1 from adding the name of the hook
-            self.assertEqual(len(self.config['services']) + 1,
-                             len(j))
+            # Only one hook controller implemented (+ hook name)
+            self.assertEqual(2, len(j))
             self.assertEqual('patchset_created',
                              j['hook_name'])
             self.assertEqual('Success',
@@ -1496,9 +1494,8 @@ Review: blop
                                       extra_environ=environ, status="*")
             self.assertEqual(400, resp.status_int)
             j = json.loads(resp.body)
-            # +1 from adding the name of the hook
-            self.assertEqual(len(self.config['services']) + 1,
-                             len(j))
+            # Only one hook controller implemented (+ hook name)
+            self.assertEqual(2, len(j))
             self.assertEqual('patchset_created',
                              j['hook_name'])
             self.assertEqual("Could not change status of issue #789",
@@ -1563,8 +1560,7 @@ gitweb: http://redmine.tests.dom/r/gitweb?p=testytest.git;a=commit;h=456
                                                 message=issue_msg)
             j = json.loads(resp.body)
             # +1 from adding the name of the hook
-            self.assertEqual(len(self.config['services']) + 1,
-                             len(j))
+            self.assertEqual(2, len(j))
             self.assertEqual('change_merged',
                              j['hook_name'])
             self.assertEqual('Success',
@@ -1577,8 +1573,7 @@ gitweb: http://redmine.tests.dom/r/gitweb?p=testytest.git;a=commit;h=456
             self.assertEqual(400, resp.status_int)
             j = json.loads(resp.body)
             # +1 from adding the name of the hook
-            self.assertEqual(len(self.config['services']) + 1,
-                             len(j))
+            self.assertEqual(2, len(j))
             self.assertEqual('change_merged',
                              j['hook_name'])
             self.assertEqual("Could not change status of issue #789",

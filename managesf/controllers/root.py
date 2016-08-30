@@ -131,9 +131,8 @@ class BackupController(RestController):
             for service in SF_SERVICES:
                 try:
                     service.backup.backup()
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] backup is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             backup.backup_start()
             response.status = 204
         except Exception as e:
@@ -155,9 +154,8 @@ class RestoreController(RestController):
             for service in SF_SERVICES:
                 try:
                     service.backup.restore()
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] backup is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             response.status = 204
         except Exception as e:
             return report_unhandled_error(e)
@@ -198,9 +196,8 @@ class MembershipController(RestController):
                 try:
                     service.membership.create(requestor, user,
                                               project, inp['groups'])
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] membership creation is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             response.status = 201
             return "%s %s has been added in group(s): %s for project %s" % \
                 ("Group" if is_group else "User",
@@ -233,9 +230,8 @@ class MembershipController(RestController):
             for service in SF_SERVICES:
                 try:
                     service.membership.delete(requestor, user, project, group)
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] membership deletion is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             response.status = 200
             if group:
                 return ("%s %s has been deleted from group %s " +
@@ -414,9 +410,8 @@ class ProjectController(RestController):
             for service in SF_SERVICES:
                 try:
                     service.project.create(name, user, inp)
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] project creation is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             response.status = 201
             self.set_cache(None)
             return "Project %s has been created." % name
@@ -444,9 +439,8 @@ class ProjectController(RestController):
             for service in SF_SERVICES:
                 try:
                     service.project.delete(name, user)
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] project deletion is not an available action'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             response.status = 200
             self.set_cache(None)
             return "Project %s has been deleted." % name
@@ -489,9 +483,8 @@ class GroupController(RestController):
             try:
                 if hasattr(service, "group"):
                     service.group.create(groupname, user_email, desc)
-            except exceptions.UnavailableActionError:
-                msg = '[%s] group create is not an available action'
-                logger.debug(msg % service.service_name)
+            except exceptions.NotImplementedError:
+                pass
             except exceptions.CreateGroupException, e:
                 # Gerrit is the reference, abort if the group
                 # can't be create in Gerrit
@@ -522,9 +515,8 @@ class GroupController(RestController):
             try:
                 if hasattr(service, "group"):
                         service.group.update(groupname, members)
-            except exceptions.UnavailableActionError:
-                msg = '[%s] group update is not an available action'
-                logger.debug(msg % service.service_name)
+            except exceptions.NotImplementedError:
+                pass
             except (exceptions.UpdateGroupException,
                     exceptions.GroupNotFoundException), e:
                 # Gerrit is the reference, abort if the group
@@ -549,9 +541,8 @@ class GroupController(RestController):
                 if isinstance(service,
                               base.BaseCodeReviewServicePlugin):
                     return service.group.get(groupname)
-            except exceptions.UnavailableActionError:
-                msg = '[%s] group get is not an available action'
-                logger.debug(msg % service.service_name)
+            except exceptions.NotImplementedError:
+                pass
             except exceptions.GroupNotFoundException, e:
                 abort(404, detail=e.message)
             except Exception as e:
@@ -590,9 +581,8 @@ class GroupController(RestController):
                     # For other services just warn via logs
                     logger.info("group %s delete on %s was unsuccessful" % (
                                 groupname, service))
-            except exceptions.UnavailableActionError:
-                msg = '[%s] group delete is not an available action'
-                logger.debug(msg % service.service_name)
+            except exceptions.NotImplementedError:
+                pass
             except Exception as e:
                 return report_unhandled_error(e)
 
@@ -752,6 +742,8 @@ class ServicesUsersController(RestController):
                     service.user.update(uid=s_id, **infos)
                 except exceptions.UnavailableActionError as e:
                     logger.debug(e)
+                except exceptions.NotImplementedError:
+                    pass
             else:
                 full_name = infos.get('full_name')
                 username = infos.get('username')
@@ -767,9 +759,8 @@ class ServicesUsersController(RestController):
                     sfmanager.user.mapping.set(user_id,
                                                service.service_name,
                                                s_id)
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] has no authenticated user backend'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
 
     @expose('json')
     def put(self, id=None, email=None, username=None):
@@ -908,9 +899,8 @@ class ServicesUsersController(RestController):
                                         infos.get('username'),
                                         service.service_name,
                                         s_id))
-            except exceptions.UnavailableActionError:
-                msg = '[%s] service has no authenticated user backend'
-                logger.debug(msg % service.service_name)
+            except exceptions.NotImplementedError:
+                pass
 
     @expose('json')
     @user_login_required
@@ -935,9 +925,8 @@ class ServicesUsersController(RestController):
                     service.user.delete(email=email, username=username)
                     sfmanager.user.mapping.delete(d_id,
                                                   service.service_name)
-                except exceptions.UnavailableActionError:
-                    msg = '[%s] service has no authenticated user backend'
-                    logger.debug(msg % service.service_name)
+                except exceptions.NotImplementedError:
+                    pass
             sfmanager.user.delete(id=d_id)
         except Exception as e:
             return report_unhandled_error(e)
@@ -1007,9 +996,11 @@ class HooksController(RestController):
                                                          hook_name)(**d)
             except exceptions.UnavailableActionError as e:
                 hooks_feedback[s.service_name] = e.message
-                unavailable_hooks += 1
                 logger.debug('[%s] hook %s is not defined' % (s.service_name,
                                                               hook_name))
+            except exceptions.NotImplementedError:
+                unavailable_hooks += 1
+                pass
             except Exception as e:
                 hooks_feedback[s.service_name] = e.message
                 return_code = 400

@@ -66,6 +66,6 @@ class TestService(TestCase):
                          self.service.hooks.patchset_created())
         self.assertEqual(2,
                          self.service.hooks.change_merged())
-        self.assertRaises(exc.UnavailableActionError,
+        self.assertRaises(exc.NotImplementedError,
                           self.service.hooks.random_undefined_hook,
                           'dummy argument')
