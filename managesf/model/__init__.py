@@ -17,7 +17,7 @@ import logging
 
 from pecan import conf  # noqa
 from sqlalchemy import create_engine, Column, String, Unicode
-from sqlalchemy import Integer, exc, event
+from sqlalchemy import Boolean, Integer, exc, event
 from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -74,6 +74,7 @@ class SFUser(Base):
     # Gerrit requires email unicity
     email = Column(String(255), nullable=False, unique=True)
     cauth_id = Column(Integer(), nullable=False)
+    idp_sync = Column(Boolean(), default=True)
 
 
 class SFUserServiceMapping(Base):
@@ -166,7 +167,7 @@ class SFUserCRUD:
                 return all
 
     def update(self, id, username=None, email=None,
-               fullname=None, cauth_id=None):
+               fullname=None, cauth_id=None, idp_sync=None):
         with session_scope() as session:
             try:
                 ret = session.query(SFUser).filter_by(id=id).one()
@@ -178,10 +179,13 @@ class SFUserCRUD:
                     ret.fullname = fullname
                 if cauth_id:
                     ret.cauth_id = cauth_id
+                if idp_sync is not None:
+                    ret.idp_sync = idp_sync
                 session.commit()
             except MultipleResultsFound:
-                # TODO(mhu) find a better Error
-                raise KeyError('search returned more than one result')
+                msg = 'SF_USERS table has multiple row with the same id!'
+                logger.error(msg)
+                raise KeyError(msg)
             except NoResultFound:
                 logger.warn("Could not update user %s: not found" % id)
                 return
