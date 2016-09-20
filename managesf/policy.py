@@ -30,9 +30,6 @@ from managesf import policies
 logger = logging.getLogger(__name__)
 
 
-_ENFORCER = None
-
-
 class FakeOsloPolicy:
     def __init__(self, policy_file):
         self.policy_dirs = []
@@ -51,13 +48,6 @@ class FakeOslo:
         return self.oslo_policy.policy_file
 
 
-def reset():
-    global _ENFORCER
-    if _ENFORCER:
-        _ENFORCER.clear()
-        _ENFORCER = None
-
-
 def init(policy_file=None, rules=None):
     """Init an Enforcer class.
        :param policy_file: Custom policy file to use, if none is specified,
@@ -66,15 +56,14 @@ def init(policy_file=None, rules=None):
                      considered just in the first instantiation.
     """
 
-    global _ENFORCER
-    if not _ENFORCER:
-        _ENFORCER = policy.Enforcer(FakeOslo(policy_file),
-                                    policy_file=policy_file,
-                                    rules=rules,
-                                    use_conf=False)
+    _ENFORCER = policy.Enforcer(FakeOslo(policy_file),
+                                policy_file=policy_file,
+                                rules=rules,
+                                use_conf=False)
     if policy_file:
         _ENFORCER.load_rules(force_reload=True)
     register_rules(_ENFORCER)
+    return _ENFORCER
 
 
 def register_rules(enforcer):
@@ -89,7 +78,6 @@ def register_rules(enforcer):
 
 
 def authorize(rule_name, target, credentials):
-    reset()
     try:
         policy_file = conf['policy'].get('policy_file')
     except KeyError:
@@ -100,9 +88,9 @@ def authorize(rule_name, target, credentials):
                'engine (this is normal when bootstrapping '
                'Software Factory)')
         logger.info(msg % policy_file)
-        init()
+        _ENFORCER = init()
     else:
-        init(policy_file=policy_file)
+        _ENFORCER = init(policy_file=policy_file)
     try:
         result = _ENFORCER.enforce(rule_name, target, credentials,
                                    do_raise=False)

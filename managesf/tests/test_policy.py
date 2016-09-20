@@ -308,8 +308,7 @@ class TestPolicyEngine(TestCase):
                        'groups': ['p0-core']}
         target['group'] = 'ptl-group'
         self.assertFalse(policy.authorize('managesf.membership:create',
-                                          target, credentials),
-                         policy._ENFORCER.rules)
+                                          target, credentials))
         self.assertFalse(policy.authorize('managesf.membership:delete',
                                           target, credentials))
         target['group'] = 'core-group'
@@ -326,13 +325,11 @@ class TestPolicyEngine(TestCase):
                        'groups': ['p0-dev']}
         target['group'] = 'ptl-group'
         self.assertFalse(policy.authorize('managesf.membership:create',
-                                          target, credentials),
-                         policy._ENFORCER.rules)
+                                          target, credentials))
         self.assertFalse(policy.authorize('managesf.membership:delete',
                                           target, credentials))
         self.assertFalse(policy.authorize('managesf.membership:create',
-                                          target, credentials),
-                         policy._ENFORCER.rules)
+                                          target, credentials))
         self.assertFalse(policy.authorize('managesf.membership:delete',
                                           target, credentials))
         target['group'] = 'dev-group'
