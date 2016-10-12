@@ -32,7 +32,7 @@ RULE_CONTRIBUTOR_API = 'rule:contributor_api'
 RULE_AUTHENTICATED_API = 'rule:authenticated_api'
 
 # TODO this value should be in the conf
-SERVICE_USER = '_SF_SERVICE_USER_'
+SERVICE_USER = 'SF_SERVICE_USER'
 
 try:
     admin_account = conf.admin['name']
