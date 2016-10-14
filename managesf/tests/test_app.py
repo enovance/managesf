@@ -28,7 +28,7 @@ from redmine.exceptions import ValidationError
 from pysflib.sfredmine import RedmineUtils
 from managesf.tests import dummy_conf
 
-from managesf.services.base import BackupManager, BaseHooksManager
+from managesf.services.base import BaseHooksManager
 from managesf.services import exceptions as exc
 
 from managesf.controllers.SFuser import SFUserManager
@@ -72,12 +72,8 @@ class FunctionalTest(TestCase):
                        'htpasswd': c.htpasswd,
                        'sshconfig': c.sshconfig,
                        'managesf': c.managesf,
-                       'jenkins': c.jenkins,
                        'storyboard': c.storyboard,
                        'mysql': c.mysql,
-                       'nodepool': c.nodepool,
-                       'etherpad': c.etherpad,
-                       'lodgeit': c.lodgeit,
                        'pages': c.pages,
                        'policy': c.policy, }
         # deactivate loggin that polute test output
@@ -540,11 +536,8 @@ class TestManageSFAppRestoreController(FunctionalTest):
         # restore a provided backup
         environ = {'REMOTE_USER': 'admin'}
         ctx = [patch('managesf.controllers.backup.backup_restore'),
-               patch('managesf.controllers.backup.backup_unpack'),
-               patch.object(BackupManager, 'restore'),
                patch.object(SFGerritProjectManager, 'get_user_groups')]
-        with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore, gug):
+        with nested(*ctx) as (backup_restore, gug):
             gug.return_value = []
             response = self.app.post('/restore', status="*",
                                      upload_files=files)
@@ -555,14 +548,10 @@ class TestManageSFAppRestoreController(FunctionalTest):
                                      status="*",
                                      upload_files=files)
             self.assertTrue(os.path.isfile(bkp))
-            self.assertTrue(backup_unpack.called)
             self.assertTrue(backup_restore.called)
-            self.assertEqual(len(dummy_conf.services),
-                             len(restore.mock_calls))
             self.assertEqual(response.status_int, 204)
         # restore a provided backup - an error occurs
-        with nested(*ctx) as (backup_restore, backup_unpack,
-                              restore, gug):
+        with nested(*ctx) as (backup_restore, gug):
             gug.return_value = []
             backup_restore.side_effect = raiseexc
             response = self.app.post('/restore',
@@ -605,9 +594,8 @@ class TestManageSFAppBackupController(FunctionalTest):
 
     def test_backup_post(self):
         ctx = [patch('managesf.controllers.backup.backup_start'),
-               patch.object(BackupManager, 'backup'),
                patch.object(SFGerritProjectManager, 'get_user_groups')]
-        with nested(*ctx) as (backup_start, backup, gug):
+        with nested(*ctx) as (backup_start, gug):
             gug.return_value = []
             response = self.app.post('/backup', status="*")
             self.assertEqual(response.status_int, 401)
@@ -616,8 +604,6 @@ class TestManageSFAppBackupController(FunctionalTest):
                                      extra_environ=environ,
                                      status="*")
             self.assertEqual(response.status_int, 204)
-            self.assertEqual(len(dummy_conf.services),
-                             len(backup.mock_calls))
             self.assertTrue(backup_start.called)
 
 
@@ -1680,7 +1666,7 @@ Review: blop
             with patch.object(BaseHooksManager,
                               'patchset_created') as patchset_created:
                 patchset_created.return_value = "mocked"
-                resp = self.app.post_json('/hooks/patchset_created/etherpad',
+                resp = self.app.post_json('/hooks/patchset_created/storyboard',
                                           {'arg1': 1, 'arg2': 2},
                                           extra_environ=environ, status="*")
                 self.assertEqual(200, resp.status_int)
@@ -1692,8 +1678,6 @@ Review: blop
                                  len(j))
                 self.assertEqual('patchset_created',
                                  j['hook_name'])
-                self.assertEqual('mocked',
-                                 j['etherpad'])
                 # call hook for nonexistent service
                 resp = self.app.post_json('/hooks/patchset_created/blagh',
                                           {'arg1': 1, 'arg2': 2},

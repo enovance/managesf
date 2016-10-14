@@ -23,10 +23,7 @@ class dummy_conf():
     services = ['SFGerrit',
                 'SFRedmine',
                 'SFStoryboard',
-                'jenkins',
-                'etherpad',
-                'nodepool',
-                'lodgeit', ]
+                ]
     gerrit = {
         'user': 'gerrit',
         'host': 'gerrit.test.dom',
@@ -57,25 +54,14 @@ class dummy_conf():
     managesf = {
         'host': 'managesf.tests.dom',
         'sshkey_priv_path': '/tmp/id_rsa',
+        'sshkey_update_path': '/tmp/id_rsa',
         'backup_dir': '/tmp',
-    }
-    jenkins = {
-        'host': 'jenkins.test.dom',
-    }
-    etherpad = {
-        'host': 'managesf.test.dom',
     }
     nodepool = {
         'host': 'nodepool.test.dom',
     }
-    lodgeit = {
-        'host': 'managesf.test.dom',
-    }
     mysql = {
         'host': 'mysql.test.dom',
-    }
-    puppetmaster = {
-        'host': 'puppetmaster.test.dom',
     }
     admin = {
         'name': 'user1',

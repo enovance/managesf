@@ -43,12 +43,8 @@ class TestPolicyEngine(TestCase):
                        'htpasswd': c.htpasswd,
                        'sshconfig': c.sshconfig,
                        'managesf': c.managesf,
-                       'jenkins': c.jenkins,
                        'storyboard': c.storyboard,
                        'mysql': c.mysql,
-                       'nodepool': c.nodepool,
-                       'etherpad': c.etherpad,
-                       'lodgeit': c.lodgeit,
                        'pages': c.pages,
                        'policy': c.policy, }
         self.app = TestApp(load_app(self.config))
@@ -514,12 +510,7 @@ class TestPolicyEngineFromFile(TestCase):
                        'htpasswd': c.htpasswd,
                        'sshconfig': c.sshconfig,
                        'managesf': c.managesf,
-                       'jenkins': c.jenkins,
                        'storyboard': c.storyboard,
-                       'mysql': c.mysql,
-                       'nodepool': c.nodepool,
-                       'etherpad': c.etherpad,
-                       'lodgeit': c.lodgeit,
                        'pages': c.pages,
                        'policy': c.policy, }
         pol_file = tempfile.mkstemp()[1] + '.yaml'
