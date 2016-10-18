@@ -15,9 +15,11 @@
 
 import os
 import re
+import yaml
 import deepdiff
 import logging
 
+from StringIO import StringIO
 from pecan import conf
 
 from managesf.model.yamlbkd.yamlbackend import YAMLBackend
@@ -416,3 +418,43 @@ class SFResourceBackendEngine(object):
                               self.subdir, self.workdir,
                               "%s_cache" % self.workdir.rstrip('/'))
         return current.get_data()
+
+    def direct_apply(self, yamlfile):
+        """ Top level direct_apply function. This function should be
+        called only under specific conditions.
+
+        The yaml will be checked for consistencies then resources
+        from this yaml struct will be created. It is needed to
+        understand that using this will de-synchronize the config
+        respository from the reality.
+        """
+        logger.info("Resources engine: direct apply resources requested")
+        direct_apply_logs = []
+        fake_previous_state = {'resources': {}}
+        for rtype in MAPPING:
+            fake_previous_state['resources'][rtype] = {}
+        try:
+            try:
+                new = yaml.safe_load(StringIO(yamlfile))
+            except Exception:
+                raise YAMLDBException("YAML format corrupted")
+            YAMLBackend._validate_base_struct(new)
+            self._check_deps_constraints(new)
+            self._check_unicity_constraints(new)
+            changes = self._get_data_diff(fake_previous_state, new)
+            self._validate_changes(changes, direct_apply_logs, new)
+            partial = self._apply_changes(changes, direct_apply_logs, new)
+        except (YAMLDBException,
+                ModelInvalidException,
+                ResourceInvalidException,
+                ResourceUnicityException,
+                ResourceDepsException), e:
+            direct_apply_logs.append(e.msg)
+            for l in direct_apply_logs:
+                logger.info(l)
+            return False, direct_apply_logs
+        for l in direct_apply_logs:
+            logger.info(l)
+        if partial:
+            return False, direct_apply_logs
+        return True, direct_apply_logs

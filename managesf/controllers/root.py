@@ -1202,13 +1202,25 @@ class ResourcesController(RestController):
     @expose('json')
     def put(self):
         self.check_policy('managesf.resources:apply')
+        infos = request.json if request.content_length else {}
         eng = SFResourceBackendEngine(
             os.path.join(conf.resources['workdir'], 'apply'),
             conf.resources['subdir'])
-        status, logs = eng.apply(conf.resources['master_repo'],
-                                 'master^1',
-                                 conf.resources['master_repo'],
-                                 'master')
+        if not infos:
+            status, logs = eng.apply(conf.resources['master_repo'],
+                                     'master^1',
+                                     conf.resources['master_repo'],
+                                     'master')
+        else:
+            try:
+                assert isinstance(infos, dict)
+                yaml = infos.get('yaml', None)
+                if not yaml:
+                    raise Exception
+            except Exception:
+                response.status = 400
+                return ['Unable to find the "yaml" key in the json payload']
+            status, logs = eng.direct_apply(yaml)
         if not status:
             response.status = 409
         else:

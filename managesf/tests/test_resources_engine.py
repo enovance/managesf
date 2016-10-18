@@ -190,6 +190,77 @@ class EngineTest(TestCase):
             self.assertEqual(len(logs), 1)
             self.assertFalse(status)
 
+    def test_direct_apply(self):
+        path = tempfile.mkdtemp()
+        self.to_delete.append(path)
+        patches = [
+            patch('yaml.safe_load'),
+            patch('managesf.model.yamlbkd.yamlbackend.YAMLBackend.'
+                  '_validate_base_struct'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._get_data_diff'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._check_deps_constraints'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._check_unicity_constraints'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._validate_changes'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._apply_changes')]
+        with nested(*patches) as (sf, b, g, cd, cu, v, a):
+            a.return_value = False
+            eng = SFResourceBackendEngine(path, None)
+            status, logs = eng.direct_apply(None)
+            self.assertTrue(status)
+            self.assertEqual(len(logs), 0)
+            self.assertTrue(g.called)
+            self.assertTrue(cd.called)
+            self.assertTrue(cu.called)
+            self.assertTrue(v.called)
+            self.assertTrue(a.called)
+            self.assertTrue(status)
+        with nested(*patches) as (sf, b, g, cd, cu, v, a):
+            v.side_effect = ResourceInvalidException('')
+            eng = SFResourceBackendEngine(path, None)
+            status, logs = eng.direct_apply(None)
+            self.assertFalse(status)
+            self.assertEqual(len(logs), 1)
+            self.assertTrue(g.called)
+            self.assertTrue(cd.called)
+            self.assertTrue(cu.called)
+            self.assertFalse(a.called)
+        patches = [
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._apply_changes'),
+            patch.dict(engine.MAPPING, {'dummies': Dummy}, clear=True)]
+        with nested(*patches) as (a, m):
+            a.return_value = False
+            yamlfile = """resources:
+  dummies:
+    id1:
+      name: dum
+      namespace: a
+"""
+            eng = SFResourceBackendEngine(path, None)
+            status, logs = eng.direct_apply(yamlfile)
+            self.assertIn(
+                'id1', a.call_args[0][0]['dummies']['create'])
+            self.assertEqual(
+                len(a.call_args[0][0]['dummies']['update']), 0)
+            self.assertEqual(
+                len(a.call_args[0][0]['dummies']['delete']), 0)
+            self.assertTrue(status)
+        with nested(*patches) as (a, m):
+            yamlfile = """/!\work yaml/!\
+"""
+            eng = SFResourceBackendEngine(path, None)
+            status, logs = eng.direct_apply(yamlfile)
+            self.assertFalse(status)
+            self.assertListEqual(
+                ['The main resource data structure is invalid'],
+                logs)
+            self.assertFalse(status)
+
     def test_get(self):
         patches = [
             patch('managesf.model.yamlbkd.yamlbackend.'
