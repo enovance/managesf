@@ -38,22 +38,25 @@ class GitRepositoryOpsTest(TestCase):
         patches = [
             patch('pysflib.sfgerrit.GerritUtils.create_project'),
             patch.object(GitRepositoryOps, 'install_acl'),
+            patch.object(GitRepositoryOps, 'install_git_review_file'),
         ]
         o = GitRepositoryOps(self.conf, None)
 
         kwargs = {'name': 'space/g1',
                   'description': 'A description',
                   'acl': 'a1'}
-        with nested(*patches) as (cp, ia):
+        with nested(*patches) as (cp, ia, ig):
             ia.return_value = []
+            ig.return_value = []
             logs = o.create(**kwargs)
             self.assertEqual(len(cp.call_args_list), 1)
             self.assertEqual(cp.call_args_list[0],
                              call('space/g1', 'A description',
                                   ['Administrators']))
             self.assertEqual(len(logs), 0)
-        with nested(*patches) as (cp, ia):
+        with nested(*patches) as (cp, ia, ig):
             ia.return_value = []
+            ig.return_value = []
             cp.side_effect = Exception('Random Error')
             logs = o.create(**kwargs)
             self.assertEqual(len(logs), 1)
@@ -143,11 +146,16 @@ class GitRepositoryOpsTest(TestCase):
 
     def test_update(self):
         with patch.object(GitRepositoryOps, 'install_acl') as ia:
-            ia.return_value = ['log']
-            o = GitRepositoryOps(None, None)
-            logs = o.update(k='v')
-            self.assertTrue(ia.called)
-            self.assertIn('log', logs)
+            with patch.object(
+                    GitRepositoryOps, 'install_git_review_file') as ig:
+                ia.return_value = ['log']
+                ig.return_value = ['log2']
+                o = GitRepositoryOps(None, None)
+                logs = o.update(k='v')
+                self.assertTrue(ia.called)
+                self.assertTrue(ig.called)
+                self.assertIn('log', logs)
+                self.assertIn('log2', logs)
 
     def test_delete(self):
         patches = [
