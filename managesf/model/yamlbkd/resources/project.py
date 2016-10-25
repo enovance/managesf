@@ -93,6 +93,7 @@ class Project(BaseResource):
         'create': lambda conf, new, kwargs: [],
         'delete': lambda conf, new, kwargs: [],
         'extra_validations': lambda conf, new, kwargs: [],
+        'get_all': lambda conf, new: ([], {}),
     }
 
     def get_deps(self):
