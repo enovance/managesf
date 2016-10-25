@@ -28,7 +28,7 @@ class ResourceInvalidException(Exception):
 
 
 AUTHORIZED_CALLBACKS = ('update', 'create', 'delete',
-                        'extra_validations')
+                        'extra_validations', 'get_all')
 
 KEY_RE_CONSTRAINT = "[a-zA-Z0-9-_]+"
 
@@ -65,6 +65,7 @@ class BaseResource(object):
         'create': lambda conf, new, kwargs: NotImplementedError,
         'delete': lambda conf, new, kwargs: NotImplementedError,
         'extra_validations': lambda conf, new, kwargs: NotImplementedError,
+        'get_all': lambda conf, new: NotImplementedError,
     }
 
     def __init__(self, id, resource):

@@ -98,6 +98,7 @@ class ACL(BaseResource):
         'delete': lambda conf, new, kwargs: [],
         'extra_validations': lambda conf, new, kwargs:
             ACLOps(conf, new).extra_validations(**kwargs),
+        'get_all': lambda conf, new: ([], {}),
     }
 
     def get_deps(self):
