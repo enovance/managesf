@@ -249,8 +249,6 @@ class EngineTest(TestCase):
 """
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.direct_apply(prev, new)
-            print status
-            print logs
             self.assertIn(
                 'id1', a.call_args[0][0]['dummies']['create'])
             self.assertEqual(
@@ -697,3 +695,68 @@ class EngineTest(TestCase):
                 self.assertIn('Resource [type: dummies, ID: myprojectid2] '
                               'has been updated.',
                               apply_logs)
+
+    def test_get_missing_resources(self):
+        patches = [
+            patch('managesf.model.yamlbkd.yamlbackend.'
+                  'YAMLBackend.__init__'),
+            patch.object(SFResourceBackendEngine, 'get'),
+            patch.dict(engine.MAPPING, {'dummies': Dummy}, clear=True),
+            patch('managesf.model.yamlbkd.resources.'
+                  'dummy.DummyOps.get_all'),
+        ]
+        with nested(*patches) as (i, g, m, ga):
+            eng = SFResourceBackendEngine(None, None)
+            current_resources = {
+                'dummies': {
+                    'd1': {
+                        'namespace': 'sf',
+                        'name': 'd1',
+                    },
+                    'd2': {
+                        'namespace': 'sf',
+                        'name': 'd2',
+                    },
+                    'd3': {
+                        'namespace': 'sf',
+                        'name': 'd3',
+                    }
+                }
+            }
+            real_resources = {
+                'dummies': {
+                    'd3': {
+                        'namespace': 'sf',
+                        'name': 'd3',
+                    },
+                    'd4': {
+                        'namespace': 'sf',
+                        'name': 'd4',
+                    },
+                    'd5': {
+                        'namespace': 'sf',
+                        'name': 'd5',
+                    }
+                }
+            }
+            g.return_value = {'resources': current_resources}
+            ga.return_value = ([], real_resources)
+            logs, ret = eng.get_missing_resources(None, None)
+            expected = {
+                'resources': {
+                    'dummies': {
+                        'd4': {
+                            'namespace': 'sf',
+                            'name': 'd4',
+                            'description': '',
+                        },
+                        'd5': {
+                            'namespace': 'sf',
+                            'name': 'd5',
+                            'description': '',
+                        },
+                    }
+                }
+            }
+            self.assertDictEqual(ret, expected)
+            self.assertListEqual(logs, [])
