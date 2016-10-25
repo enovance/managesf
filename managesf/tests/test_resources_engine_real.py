@@ -1084,3 +1084,107 @@ wrong ! This string won't be accepted by Gerrit !
                           'refresh as at least one of its dependencies '
                           'has been updated', logs)
             self.assertEqual(len(logs), 4)
+
+    def test_get_missing_resources(self):
+        patches = [
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine.get'),
+            patch('managesf.model.yamlbkd.resources.gitrepository.'
+                  'GitRepositoryOps.get_all'),
+            patch('managesf.model.yamlbkd.resources.group.'
+                  'GroupOps.get_all'),
+        ]
+        eng = engine.SFResourceBackendEngine(None, None)
+        current_resources = {
+            'resources': {
+                'projects': {
+                    'p1': {
+                        'name': 'p1',
+                        'description': 'An awesome project',
+                        'source-repositories': ['r1'],
+                    },
+                },
+                'groups': {
+                    'g1': {
+                        'name': 'g1',
+                        'members': ['user2@sftests.com'],
+                    },
+                    'g2': {
+                        'name': 'g2',
+                        'members': ['user3@sftests.com'],
+                    },
+                },
+                'repos': {
+                    'r1': {
+                        'name': 'sf/r1',
+                        'acl': 'a1',
+                    },
+                    'r2': {
+                        'name': 'sf/r2',
+                        'acl': 'a1',
+                    },
+                },
+                'acls': {
+                    'a1': {
+                        'file': 'fake',
+                    }
+                }
+            }
+        }
+        gr_reality = {
+            'repos': {
+                'r1': {
+                    'name': 'sf/r1',
+                    'acl': 'a1',
+                },
+                'r2': {
+                    'name': 'sf/r2',
+                    'acl': 'a1',
+                },
+                'r3': {
+                    'name': 'sf/r3',
+                    'acl': 'a1',
+                },
+            },
+            'acls': {
+                'a1': {
+                    'file': 'fake',
+                },
+                'a2': {
+                    'file': 'fake2',
+                },
+            },
+        }
+        g_reality = {
+            'groups': {
+                'g3': {
+                    'name': 'g3',
+                    'members': ['user3@sftests.com'],
+                },
+            },
+        }
+        expected = {
+            'resources': {
+                'groups': {
+                    'g3': {
+                        'name': 'g3',
+                        'description': '',
+                        'members': ['user3@sftests.com']}},
+                'repos': {
+                    'r3': {
+                        'name': 'sf/r3',
+                        'description': 'No description provided',
+                        'acl': 'a1'}},
+                'acls': {
+                    'a2': {
+                        'groups': [],
+                        'file': 'fake2'}},
+                'projects': {}}}
+
+        with nested(*patches) as (g, gar, gag):
+            gar.return_value = ([], gr_reality)
+            gag.return_value = ([], g_reality)
+            g.return_value = current_resources
+            logs, tree = eng.get_missing_resources(None, None)
+            self.assertListEqual(logs, [])
+            self.assertDictEqual(tree, expected)
