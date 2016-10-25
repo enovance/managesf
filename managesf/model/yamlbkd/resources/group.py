@@ -33,7 +33,7 @@ from managesf.model.yamlbkd.resource import BaseResource
 # from pecan import configuration
 # from managesf.model.yamlbkd.resources.group import GroupOps
 # conf = configuration.conf_from_file('/var/www/managesf/config.py')
-# g = GroupOps(conf)
+# g = GroupOps(conf, {})
 # g._set_client()
 # ###
 
@@ -58,6 +58,40 @@ class GroupOps(object):
                               data=data)
         except HTTPError as e:
             return self.client._manage_errors(e)
+
+    def get_all(self):
+        logs = []
+        groups = {}
+
+        self._set_client()
+
+        try:
+            ret = self.client.get_groups()
+            if ret is False:
+                logs.append("Group list: err API returned HTTP 404/409")
+                return logs, groups
+        except Exception, e:
+            logs.append("Group list: err API returned %s" % e)
+            return logs, groups
+        groups = {}
+        for gname, data in ret.items():
+            groups[gname] = {}
+            groups[gname]['name'] = gname
+            groups[gname]['description'] = data['description']
+            groups[gname]['members'] = []
+            try:
+                members = self.client.get_group_members(str(data['group_id']))
+                if members is False:
+                    logs.append(
+                        "Group list members [%s]: err API returned "
+                        "HTTP 404/409" % (gname))
+                else:
+                    groups[gname]['members'] = [m['email'] for m in members]
+            except Exception, e:
+                logs.append(
+                    "Group list members [%s]: err API "
+                    "returned %s" % (gname, e))
+        return logs, {'groups': groups}
 
     def create(self, **kwargs):
         logs = []
@@ -273,4 +307,6 @@ class Group(BaseResource):
             GroupOps(conf, new).delete(**kwargs),
         'extra_validations': lambda conf, new, kwargs:
             GroupOps(conf, new).extra_validations(**kwargs),
+        'get_all': lambda conf, new:
+            GroupOps(conf, new).get_all(),
     }

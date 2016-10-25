@@ -465,3 +465,36 @@ class SFResourceBackendEngine(object):
         if partial:
             return False, direct_apply_logs
         return True, direct_apply_logs
+
+    def get_reality_diff(self, cur_uri, cur_ref):
+        """ Top level get_reality_diff. This method read
+        the real resources from services and return resources
+        struct containing only missing resources (not found
+        in the YAML backend (master HEAD)).
+
+        This method will only take in account changes of type
+        create and will return a single resources tree.
+        """
+        logger.info("Resources engine: get resources reality diff requested")
+        current = self.get(cur_uri, cur_ref)
+        reality = {'resources': {}}
+        for rtype in MAPPING:
+            current['resources'].setdefault(rtype, {})
+            reality['resources'].setdefault(rtype, {})
+        ret_tree = {'resources': {}}
+        logs = []
+        for rtype in MAPPING:
+            ret = MAPPING[rtype].CALLBACKS['get_all'](conf, {})
+            logs.extend(ret[0])
+            reality['resources'].update(ret[1])
+        # Worth to test it even if it should never fails
+        self._check_deps_constraints(reality)
+        self._check_unicity_constraints(reality)
+        # Get diff between reality and config
+        changes = self._get_data_diff(current, reality)
+        # Create the resources tree with only resources to create
+        for rtype in changes:
+            ret_tree['resources'][rtype] = changes[rtype]['create']
+        for l in logs:
+            logger.info(l)
+        return logs, ret_tree
