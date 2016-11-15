@@ -72,6 +72,12 @@ class ACLOps(object):
 class ACL(BaseResource):
 
     MODEL_TYPE = 'acl'
+    DESCRIPTION = ("The acl resource is used to store a Gerrit ACL. "
+                   "The acl can be share between multiple git repositories."
+                   "Group mentionned in inside the acl file key must be "
+                   "referenced by there ID under the groups key. Do not "
+                   "provide the description entry in the acl file to keep "
+                   "them shareable between git repositories if needed.")
     MODEL = {
         'file': (
             str,
