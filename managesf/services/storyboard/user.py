@@ -128,6 +128,12 @@ class StoryboardUserManager(base.UserManager):
     def update(self, uid, username=None, full_name=None, email=None, **kwargs):
         uid = int(uid)
         self.create_update_user(uid, email, full_name)
+        try:
+            username = SFuser.SFUserManager().get(email=email)['username']
+        except KeyError:
+            logger.error(u'[%s] Can not find user email=%s' % (
+                self.plugin.service_name, email))
+            username = None
         if username:
             self.create_update_user_token(uid, username)
         logger.info(u'[%s] uid=%d username=%s fullname=%s email=%s updated' % (
