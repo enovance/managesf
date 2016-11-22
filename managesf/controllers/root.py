@@ -83,6 +83,21 @@ def _decode_project_name(name):
     return name
 
 
+def unquote(f):
+
+    def x(t):
+        if isinstance(t, basestring):
+            return urllib.unquote_plus(t)
+        return t
+
+    def dec(*args, **kwargs):
+        nargs = [x(a) for a in args]
+        nkwargs = dict((u, x(v)) for u, v in kwargs.items())
+        return f(*nargs, **nkwargs)
+
+    return dec
+
+
 class SFManager:
     user = SFuser.SFUserManager()
 
@@ -186,6 +201,7 @@ class MembershipController(RestController):
                 for x in sfmanager.user.all()]
 
     @expose('json')
+    @unquote
     def put(self, project=None, user=None):
         _policy = 'managesf.membership:create'
         if not project or not user:
@@ -196,8 +212,6 @@ class MembershipController(RestController):
                   detail=msg)
 
         project = _decode_project_name(project)
-        if user:
-            user = urllib.unquote_plus(user)
         inp = request.json if request.content_length else {}
         if 'groups' not in inp:
             abort(400)
@@ -237,6 +251,7 @@ class MembershipController(RestController):
             return report_unhandled_error(e)
 
     @expose('json')
+    @unquote
     def delete(self, project=None, user=None, group=None):
         _policy = 'managesf.membership:delete'
         if not project or not user:
@@ -247,8 +262,6 @@ class MembershipController(RestController):
                                                                 user))
 
         project = _decode_project_name(project)
-        if user:
-            user = urllib.unquote_plus(user)
         if not group:
             grps = ['ptl-group',
                     'core-group',
@@ -412,6 +425,7 @@ class ProjectController(RestController):
         return cache.get(name)
 
     @expose('json')
+    @unquote
     def get_one(self, project_id):
         _policy = 'managesf.project:get_one'
         if not authorize(_policy,
@@ -426,6 +440,7 @@ class ProjectController(RestController):
         return project
 
     @expose('json')
+    @unquote
     def put(self, name):
         _policy = 'managesf.project:create'
 
@@ -470,6 +485,7 @@ class ProjectController(RestController):
             return report_unhandled_error(e)
 
     @expose('json')
+    @unquote
     def delete(self, name):
         name = _decode_project_name(name)
         _policy = 'managesf.project:delete'
@@ -511,6 +527,7 @@ class GroupController(RestController):
         return sorted_services
 
     @expose()
+    @unquote
     def put(self, groupname):
         # TODO put is usually update, post = create, this was mixed here
         _policy = 'managesf.group:create'
@@ -547,6 +564,7 @@ class GroupController(RestController):
             response.status = 201
 
     @expose()
+    @unquote
     def post(self, groupname):
         _policy = 'managesf.group:update'
         groupname = urllib.unquote_plus(groupname)
@@ -580,6 +598,7 @@ class GroupController(RestController):
                 return report_unhandled_error(e)
 
     @expose('json')
+    @unquote
     def get(self, groupname):
         _policy = 'managesf.group:get'
         target = {}
@@ -607,6 +626,7 @@ class GroupController(RestController):
         return self.get(None)
 
     @expose()
+    @unquote
     def delete(self, groupname):
         _policy = 'managesf.group:delete'
         groupname = urllib.unquote_plus(groupname)
@@ -644,6 +664,7 @@ class GroupController(RestController):
 class PagesController(RestController):
 
     @expose('json')
+    @unquote
     def post(self, project):
         user = request.remote_user
         _policy = 'managesf.pages:create'
@@ -677,6 +698,7 @@ class PagesController(RestController):
         return retmsg
 
     @expose('json')
+    @unquote
     def get(self, project):
         _policy = 'managesf.pages:get'
         if not project:
@@ -697,6 +719,7 @@ class PagesController(RestController):
         return ret
 
     @expose('json')
+    @unquote
     def delete(self, project):
         user = request.remote_user
         _policy = 'managesf.pages:delete'
@@ -723,6 +746,7 @@ class PagesController(RestController):
 class LocalUserController(RestController):
 
     @expose('json')
+    @unquote
     def post(self, username):
         _policy = 'managesf.localuser:create_update'
         if not authorize(_policy,
@@ -742,6 +766,7 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
+    @unquote
     def get(self, username):
         _policy = 'managesf.localuser:get'
         if not authorize(_policy,
@@ -757,6 +782,7 @@ class LocalUserController(RestController):
         return ret
 
     @expose('json')
+    @unquote
     def delete(self, username):
         _policy = 'managesf.localuser:delete'
         if not authorize(_policy,
@@ -845,6 +871,7 @@ class ServicesUsersController(RestController):
                     pass
 
     @expose('json')
+    @unquote
     def put(self, id=None, email=None, username=None):
         _policy = 'managesf.user:update'
         infos = request.json if request.content_length else {}
@@ -884,6 +911,7 @@ class ServicesUsersController(RestController):
             return report_unhandled_error(e)
 
     @expose('json')
+    @unquote
     def post(self):
         _policy = 'managesf.user:create'
         infos = request.json if request.content_length else {}
@@ -977,6 +1005,7 @@ class ServicesUsersController(RestController):
                 pass
 
     @expose('json')
+    @unquote
     def get(self, **kwargs):
         _policy = 'managesf.user:get'
         if not authorize(_policy,
@@ -986,6 +1015,7 @@ class ServicesUsersController(RestController):
         return sfmanager.user.get(**kwargs)
 
     @expose()
+    @unquote
     def delete(self, id=None, email=None, username=None):
         _policy = 'managesf.user:delete'
         if not authorize(_policy,
@@ -1064,6 +1094,7 @@ class HtpasswdController(RestController):
 class HooksController(RestController):
 
     @expose('json')
+    @unquote
     def post(self, hook_name, service_name=None):
         """Trigger hook {hook_name} across all services. If {service_name}
         is set, trigger the hook only for that service."""
@@ -1113,6 +1144,7 @@ class HooksController(RestController):
 class TestsController(RestController):
 
     @expose('json')
+    @unquote
     def put(self, project_name=''):
         _policy = 'managesf.tests:add'
         if not authorize(_policy,
@@ -1172,6 +1204,7 @@ class ResourcesController(RestController):
                          detail='Failure to comply with policy %s' % _policy)
 
     @expose('json')
+    @unquote
     def get(self, **kwargs):
         self.check_policy('managesf.resources:get')
         eng = SFResourceBackendEngine(
