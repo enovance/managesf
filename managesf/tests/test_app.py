@@ -81,7 +81,8 @@ class FunctionalTest(TestCase):
                        'mysql': c.mysql,
                        'pages': c.pages,
                        'policy': c.policy,
-                       'resources': c.resources, }
+                       'resources': c.resources,
+                       'jenkins': c.jenkins, }
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
         # 'logging': c.logging}
