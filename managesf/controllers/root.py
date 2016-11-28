@@ -45,7 +45,7 @@ CLIENTERRORMSG = "Unable to process your request, failed with "\
 
 # instanciate service plugins
 SF_SERVICES = []
-DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard']
+DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard', 'SFJenkins']
 
 
 def load_services():
@@ -1205,6 +1205,153 @@ class ResourcesController(RestController):
         return logs
 
 
+JOBRUNNERS = [s for s in SF_SERVICES
+              if isinstance(s, base.BaseJobRunnerServicePlugin)]
+
+
+class JobController(RestController):
+
+    class JobLogsController(RestController):
+        @expose('json')
+        def get(self, job_name, job_id):
+            _policy = 'managesf.job:get'
+            if not authorize(_policy,
+                             target={"job": job_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            try:
+                results = {}
+                for jobrunner in JOBRUNNERS:
+                    r = jobrunner.job.get_job_logs(job_name,
+                                                   job_id)
+                    results[jobrunner.service_name] = r
+                response.status = 200
+                return results
+            except Exception as e:
+                response.status = 500
+                return {'error_description': str(e)}
+
+    class JobParametersController(RestController):
+        @expose('json')
+        def get(self, job_name, job_id):
+            _policy = 'managesf.job:get'
+            if not authorize(_policy,
+                             target={"job": job_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            try:
+                results = {}
+                for jobrunner in JOBRUNNERS:
+                    r = jobrunner.job.get_job_parameters(job_name,
+                                                         job_id)
+                    results[jobrunner.service_name] = r
+                response.status = 200
+                return results
+            except Exception as e:
+                response.status = 500
+                return {'error_description': str(e)}
+
+    logs = JobLogsController()
+    parameters = JobParametersController()
+
+    @expose('json')
+    def get(self, job_name, job_id):
+        _policy = 'managesf.job:get'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        response.status = 400
+        if not job_name:
+            return {'error_description': 'missing job name'}
+        try:
+            results = {}
+            for jobrunner in JOBRUNNERS:
+                r = jobrunner.job.get_job(job_name, job_id)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+    @expose('json')
+    def delete(self, job_name, job_id):
+        _policy = 'managesf.job:stop'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        if not job_name or not job_id:
+            response.status = 400
+            return {'error_description': 'missing parameter(s)'}
+        try:
+            results = {}
+            for jobrunner in JOBRUNNERS:
+                r = jobrunner.job.stop(job_name, job_id)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+
+class JobsController(RestController):
+
+    id = JobController()
+
+    @expose('json')
+    def get(self, job_name):
+        _policy = 'managesf.job:get'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        response.status = 400
+        if not job_name:
+            return {'error_description': 'missing job name'}
+        kwargs = {}
+        if request.json:
+            kwargs = request.json
+        try:
+            results = {}
+            for jobrunner in JOBRUNNERS:
+                r = jobrunner.job.get_job(job_name, **kwargs)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+    @expose('json')
+    def post(self, job_name):
+        _policy = 'managesf.job:run'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        if not job_name:
+            response.status = 400
+            return {'error_description': 'missing job name'}
+        parameters = None
+        if request.json:
+            parameters = request.json
+        try:
+            results = {}
+            for jobrunner in JOBRUNNERS:
+                r = jobrunner.job.run(job_name, parameters)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+
 load_services()
 
 
@@ -1222,3 +1369,4 @@ class RootController(object):
     config = ConfigController()
     pages = PagesController()
     resources = ResourcesController()
+    jobs = JobsController()
