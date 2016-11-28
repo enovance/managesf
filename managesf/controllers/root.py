@@ -45,7 +45,7 @@ CLIENTERRORMSG = "Unable to process your request, failed with "\
 
 # instanciate service plugins
 SF_SERVICES = []
-DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard']
+DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard', 'SFJenkins']
 
 
 def load_services():
@@ -1205,6 +1205,98 @@ class ResourcesController(RestController):
         return logs
 
 
+class JobController(RestController):
+
+    @expose('json')
+    def post(self, job_name):
+        _policy = 'managesf.job:run'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        if not job_name:
+            response.status = 400
+            return {'error_description': 'missing job name'}
+        jobrunners = [s for s in SF_SERVICES
+                      if isinstance(s, base.BaseJobRunnerServicePlugin)]
+        parameters = None
+        if request.json:
+            parameters = request.json
+        try:
+            results = {}
+            for jobrunner in jobrunners:
+                r = jobrunner.job.run(job_name, parameters)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+    @expose('json')
+    def get(self, job_name, subquery=None):
+        """supported kwargs: job_id, change, patchset"""
+        _policy = 'managesf.job:get'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        default_subqueries = ['logs', 'parameters', ]
+        response.status = 400
+        if not job_name:
+            return {'error_description': 'missing job name'}
+        if subquery and subquery not in default_subqueries:
+            return {'error_description': 'Unknown subquery %s' % subquery}
+        kwargs = {}
+        if request.json:
+            kwargs = request.json
+        if subquery and not kwargs.get('job_id'):
+            return {'error_description': 'job_id required for subqueries'}
+        jobrunners = [s for s in SF_SERVICES
+                      if isinstance(s, base.BaseJobRunnerServicePlugin)]
+        try:
+            results = {}
+            for jobrunner in jobrunners:
+                if subquery == 'logs':
+                    r = jobrunner.job.get_job_logs(job_name,
+                                                   kwargs.get('job_id'))
+                elif subquery == 'parameters':
+                    r = jobrunner.job.get_job_parameters(job_name,
+                                                         kwargs.get('job_id'))
+                else:
+                    r = jobrunner.job.get_job(job_name,
+                                              **kwargs)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+    @expose('json')
+    def delete(self, job_name, job_id):
+        _policy = 'managesf.job:stop'
+        if not authorize(_policy,
+                         target={"job": job_name}):
+            return abort(401,
+                         detail='Failure to comply with policy %s' % _policy)
+        if not job_name or not job_id:
+            response.status = 400
+            return {'error_description': 'missing parameter(s)'}
+        jobrunners = [s for s in SF_SERVICES
+                      if isinstance(s, base.BaseJobRunnerServicePlugin)]
+        try:
+            results = {}
+            for jobrunner in jobrunners:
+                r = jobrunner.job.stop(job_name, job_id)
+                results[jobrunner.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': str(e)}
+
+
 load_services()
 
 
@@ -1222,3 +1314,4 @@ class RootController(object):
     config = ConfigController()
     pages = PagesController()
     resources = ResourcesController()
+    jobs = JobController()
