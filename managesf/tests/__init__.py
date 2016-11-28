@@ -23,6 +23,7 @@ class dummy_conf():
     services = ['SFGerrit',
                 'SFRedmine',
                 'SFStoryboard',
+                'SFJenkins',
                 ]
     gerrit = {
         'user': 'gerrit',
@@ -50,6 +51,9 @@ class dummy_conf():
         'api_key': 'XXX',
         'host': 'redmine.tests.dom',
         'url': 'http://redmine.tests.dom',
+    }
+    jenkins = {
+        'url': 'https://jenkins.tests.dom',
     }
     managesf = {
         'host': 'managesf.tests.dom',
