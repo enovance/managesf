@@ -14,6 +14,7 @@
 
 import os
 import json
+import uuid
 import shutil
 import base64
 import tempfile
@@ -1745,9 +1746,11 @@ class TestResourcesController(FunctionalTest):
 
         data = {'resources': {'dummies': {}}}
         repo_path = self.prepare_repo(data)
+        id1 = str(uuid.uuid4())
+        id2 = str(uuid.uuid4())
         proposed_data = {'resources': {'dummies': {
-                         'id1': {'namespace': 'awesome',
-                                 'name': 'p1'}}}}
+                         id1: {'namespace': 'awesome',
+                               'name': 'p1'}}}}
         repo_path_zuul = self.prepare_repo(proposed_data)
         # This patch.object for the policy engine
         with patch.object(SFGerritProjectManager, 'get_user_groups'):
@@ -1764,16 +1767,16 @@ class TestResourcesController(FunctionalTest):
                                               extra_environ=environ,
                                               status="*")
                 self.assertIn(
-                    'Resource [type: dummies, ID: id1] is going '
-                    'to be created.',
+                    'Resource [type: dummies, ID: %s] is going '
+                    'to be created.' % id1,
                     resp.json)
                 self.assertEqual(resp.status_code, 200)
 
                 proposed_data = {'resources': {'dummies': {
-                                 'idbogus': {'namespace': 'awesome',
-                                             'n4me': 'p3'},
-                                 'id2': {'namespace': 'awesome',
-                                         'name': 'p2'}
+                                 id1: {'namespace': 'awesome',
+                                       'n4me': 'p3'},
+                                 id2: {'namespace': 'awesome',
+                                       'name': 'p2'}
                                  }}}
                 repo_path_zuul = self.prepare_repo(proposed_data)
                 kwargs = {'zuul_url': repo_path_zuul,
@@ -1785,14 +1788,16 @@ class TestResourcesController(FunctionalTest):
                                               extra_environ=environ,
                                               status="*")
                 self.assertIn(
-                    "Resource [type: dummy, ID: idbogus] contains extra keys. "
-                    "Please check the model.",
+                    "Resource [type: dummy, ID: %s] contains extra keys. "
+                    "Please check the model." % id1,
                     resp.json)
                 self.assertEqual(resp.status_code, 409)
 
     def test_put(self):
         workdir = tempfile.mkdtemp()
         self.to_delete.append(workdir)
+
+        id1 = str(uuid.uuid4())
 
         environ = {'REMOTE_USER': 'SF_SERVICE_USER'}
 
@@ -1825,10 +1830,10 @@ class TestResourcesController(FunctionalTest):
                     prev = "resources: {}"
                     new = """resources:
   dummies:
-    id1:
+    %s:
       name: dum
       namespace: a
-"""
+""" % id1
                     kwargs = {'prev': prev, 'new': new}
                     resp = self.app.put_json('/resources/',
                                              kwargs,
@@ -1836,12 +1841,12 @@ class TestResourcesController(FunctionalTest):
                                              status="*")
                     self.assertListEqual(
                         resp.json,
-                        ["Resource [type: dummies, ID: id1] is "
-                         "going to be created.",
-                         "Resource [type: dummies, ID: id1] will "
-                         "be created.",
-                         "Resource [type: dummies, ID: id1] has "
-                         "been created."])
+                        ["Resource [type: dummies, ID: %s] is "
+                         "going to be created." % id1,
+                         "Resource [type: dummies, ID: %s] will "
+                         "be created." % id1,
+                         "Resource [type: dummies, ID: %s] has "
+                         "been created." % id1])
                     kwargs = {'wrong': None}
                     resp = self.app.put_json('/resources/',
                                              kwargs,

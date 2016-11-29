@@ -40,6 +40,10 @@ MAPPING = {'repos': GitRepository,
            'projects': Project,
            'acls': ACL}
 
+# A resource ID should be an UUID4
+RID_RE_STR = '^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$'
+RID_RE = re.compile(RID_RE_STR)
+
 
 class ResourceDepsException(Exception):
     def __init__(self, msg):
@@ -47,6 +51,11 @@ class ResourceDepsException(Exception):
 
 
 class ResourceUnicityException(Exception):
+    def __init__(self, msg):
+        self.msg = msg
+
+
+class ResourceIDException(Exception):
     def __init__(self, msg):
         self.msg = msg
 
@@ -139,6 +148,19 @@ class SFResourceBackendEngine(object):
                 rtype, prev['resources'][rtype], new['resources'][rtype],
                 changed_resources_ids[rtype])
         return sanitized_changes
+
+    def _check_id_constraints(self, new_data):
+        """ This method read the new tree and validate if
+        each resource id follow the id format constraint
+        """
+        for rtype, resources in new_data['resources'].items():
+            for rid, data in resources.items():
+                if not RID_RE.match(rid):
+                    raise ResourceIDException(
+                        "Resource [type: %s, ID: %s] is referenced "
+                        "under a non valid ID. Please be sure the "
+                        "ID matchs the regex %s" % (
+                            rtype, rid, RID_RE_STR))
 
     def _check_unicity_constraints(self, new_data):
         """ This method read the new tree and validate if each
@@ -436,6 +458,7 @@ class SFResourceBackendEngine(object):
         try:
             prev, new = self._load_resources_data(
                 repo_prev_uri, prev_ref, repo_new_uri, new_ref)
+            self._check_id_constraints(new)
             self._check_deps_constraints(new)
             self._check_unicity_constraints(new)
             changes = self._get_data_diff(prev, new)
@@ -444,6 +467,7 @@ class SFResourceBackendEngine(object):
                 self._resolv_resources_need_refresh(changes, new))
         except (YAMLDBException,
                 ModelInvalidException,
+                ResourceIDException,
                 ResourceInvalidException,
                 ResourceUnicityException,
                 ResourceDepsException), e:
@@ -517,6 +541,7 @@ class SFResourceBackendEngine(object):
             for rtype in MAPPING:
                 prev['resources'].setdefault(rtype, {})
                 new['resources'].setdefault(rtype, {})
+            self._check_id_constraints(new)
             self._check_deps_constraints(new)
             self._check_unicity_constraints(new)
             changes = self._get_data_diff(prev, new)
@@ -526,6 +551,7 @@ class SFResourceBackendEngine(object):
             partial = self._apply_changes(changes, direct_apply_logs, new)
         except (YAMLDBException,
                 ModelInvalidException,
+                ResourceIDException,
                 ResourceInvalidException,
                 ResourceUnicityException,
                 ResourceDepsException), e:

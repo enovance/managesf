@@ -15,7 +15,6 @@
 # under the License.
 
 import os
-import hashlib
 import tempfile
 
 from unittest import TestCase
@@ -248,13 +247,6 @@ class GitRepositoryOpsTest(TestCase):
     action = fast forward only
 """
 
-        m = hashlib.md5()
-        m.update(clean_a1)
-        a1_id = m.hexdigest()
-        m = hashlib.md5()
-        m.update(a2)
-        a2_id = m.hexdigest()
-
         def fake_get_projects():
             return ['p1', 'p2']
 
@@ -282,22 +274,15 @@ class GitRepositoryOpsTest(TestCase):
             logs, tree = o.get_all()
             self.assertIn('repos', tree.keys())
             self.assertIn('acls', tree.keys())
-            self.assertIn(a1_id, tree['acls'].keys())
-            self.assertIn(a2_id, tree['acls'].keys())
             self.assertEqual(len(tree['acls'].keys()), 2)
-            self.assertIn('p1', tree['repos'].keys())
-            self.assertIn('p2', tree['repos'].keys())
+            p1 = [p for p in tree['repos'].values() if p['name'] == 'p1'][0]
+            p2 = [p for p in tree['repos'].values() if p['name'] == 'p2'][0]
             self.assertEqual(len(tree['repos'].keys()), 2)
-            self.assertDictEqual(tree['repos']['p1'],
-                                 {'name': 'p1',
-                                  'description': 'This is the project p1',
-                                  'acl': a1_id})
-            self.assertDictEqual(tree['repos']['p2'],
-                                 {'name': 'p2',
-                                  'acl': a2_id})
-            self.assertEqual(tree['acls'][a1_id]['file'], clean_a1)
-            self.assertIn('p1-ptl', tree['acls'][a1_id]['groups'])
-            self.assertIn('p1-core', tree['acls'][a1_id]['groups'])
-            self.assertEqual(len(tree['acls'][a1_id]['groups']), 2)
-            self.assertEqual(tree['acls'][a2_id]['file'], a2)
-            self.assertEqual(len(tree['acls'][a2_id]['groups']), 0)
+            p1_acl_id = p1['acl']
+            p2_acl_id = p2['acl']
+            self.assertEqual(tree['acls'][p1_acl_id]['file'], clean_a1)
+            self.assertIn('p1-ptl', tree['acls'][p1_acl_id]['groups'])
+            self.assertIn('p1-core', tree['acls'][p1_acl_id]['groups'])
+            self.assertEqual(len(tree['acls'][p1_acl_id]['groups']), 2)
+            self.assertEqual(tree['acls'][p2_acl_id]['file'], a2)
+            self.assertEqual(len(tree['acls'][p2_acl_id]['groups']), 0)
