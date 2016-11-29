@@ -15,6 +15,7 @@
 
 
 import re
+from hashlib import md5
 
 
 class ModelInvalidException(Exception):
@@ -31,6 +32,17 @@ AUTHORIZED_CALLBACKS = ('update', 'create', 'delete',
                         'extra_validations', 'get_all')
 
 KEY_RE_CONSTRAINT = "[a-zA-Z0-9-_]+"
+
+
+def create_id_based_on_str(strid):
+    """ Create an id of the form of an UUID
+    based on the hash of a str.
+    """
+    m = md5()
+    m.update(strid)
+    m = m.hexdigest()
+    uuid = '%s-%s-%s-%s-%s'
+    return uuid % (m[:8], m[8:12], m[12:16], m[16:20], m[20:32])
 
 
 class BaseResource(object):

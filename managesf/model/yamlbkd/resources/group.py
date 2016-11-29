@@ -21,6 +21,7 @@ from requests.exceptions import HTTPError
 
 from managesf.services.gerrit import SoftwareFactoryGerrit
 from managesf.model.yamlbkd.resource import BaseResource
+from managesf.model.yamlbkd.resource import create_id_based_on_str
 
 # ## DEBUG statements to ease run that standalone ###
 # import logging
@@ -81,10 +82,11 @@ class GroupOps(object):
         for gname, data in all_groups.items():
             if gname in UNMANAGED_GERRIT_GROUPS:
                 continue
-            groups[gname] = {}
-            groups[gname]['name'] = gname
-            groups[gname]['description'] = data['description']
-            groups[gname]['members'] = []
+            rid = create_id_based_on_str(gname)
+            groups[rid] = {}
+            groups[rid]['name'] = gname
+            groups[rid]['description'] = data['description']
+            groups[rid]['members'] = []
             try:
                 members = self.client.get_group_members(str(data['group_id']))
                 if members is False:
@@ -92,7 +94,7 @@ class GroupOps(object):
                         "Group list members [%s]: err API returned "
                         "HTTP 404/409" % (gname))
                 else:
-                    groups[gname]['members'] = [m['email'] for m in members]
+                    groups[rid]['members'] = [m['email'] for m in members]
             except Exception, e:
                 logs.append(
                     "Group list members [%s]: err API "

@@ -14,12 +14,13 @@
 # under the License.
 
 import re
-import hashlib
+import uuid
 
 from git.config import GitConfigParser
 
 from managesf.services.gerrit import SoftwareFactoryGerrit
 from managesf.model.yamlbkd.resource import BaseResource
+from managesf.model.yamlbkd.resource import create_id_based_on_str
 from managesf.services.gerrit import utils
 from managesf.controllers.utils import template
 
@@ -70,7 +71,8 @@ class GitRepositoryOps(object):
             logs.append("Repo list: err API returned %s" % e)
 
         for name in repos:
-            gitrepos[name] = {}
+            rid = str(uuid.uuid4())
+            gitrepos[rid] = {}
             r = utils.GerritRepo(name, self.conf)
             # Remove the project section when it only contains description
             remove_project_section = False
@@ -84,7 +86,7 @@ class GitRepositoryOps(object):
                         if k == 'description':
                             if len(c.items(section_name)) == 1:
                                 remove_project_section = True
-                            gitrepos[name]['description'] = v
+                            gitrepos[rid]['description'] = v
                         continue
                     r = re.search('group (.*)', v)
                     if r:
@@ -102,17 +104,17 @@ class GitRepositoryOps(object):
                 if l.find('description') != -1:
                     continue
                 acl += l.replace('\t', '    ').rstrip() + '\n'
-            m = hashlib.md5()
-            m.update(acl)
-            acl_id = m.hexdigest()
-            gitrepos[name]['name'] = name
-            gitrepos[name]['acl'] = acl_id
+            acl_id = str(uuid.uuid4())
+            gitrepos[rid]['name'] = name
+            gitrepos[rid]['acl'] = acl_id
             acls[acl_id] = {}
             acls[acl_id]['file'] = acl
             acls[acl_id]['groups'] = acl_groups
             acls[acl_id]['groups'] -= set(DEFAULT_GROUPS)
             acls[acl_id]['groups'] -= set(('Registered Users',))
-            acls[acl_id]['groups'] = list(acls[acl_id]['groups'])
+            acls[acl_id]['groups'] = [
+                create_id_based_on_str(g)
+                for g in acls[acl_id]['groups']]
         return logs, {'repos': gitrepos, 'acls': acls}
 
     def create(self, **kwargs):
