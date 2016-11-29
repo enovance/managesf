@@ -15,6 +15,7 @@
 # under the License.
 
 import os
+import uuid
 import shutil
 import tempfile
 
@@ -26,6 +27,7 @@ from managesf.model.yamlbkd import engine
 from managesf.model.yamlbkd.engine import SFResourceBackendEngine
 from managesf.model.yamlbkd.engine import ResourceDepsException
 from managesf.model.yamlbkd.engine import ResourceUnicityException
+from managesf.model.yamlbkd.engine import ResourceIDException
 
 from managesf.model.yamlbkd.yamlbackend import YAMLDBException
 from managesf.model.yamlbkd.resource import BaseResource
@@ -116,44 +118,54 @@ class EngineTest(TestCase):
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._get_data_diff'),
             patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._check_id_constraints'),
+            patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._check_deps_constraints'),
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._check_unicity_constraints'),
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._validate_changes')]
-        with nested(*patches) as (l, g, c, cu, v):
+        with nested(*patches) as (l, g, ci, c, cu, v):
             l.return_value = (None, None)
             eng = SFResourceBackendEngine(path, None)
             status, _ = eng.validate(None, None, None, None)
             self.assertTrue(l.called)
             self.assertTrue(g.called)
+            self.assertTrue(ci.called)
             self.assertTrue(c.called)
             self.assertTrue(cu.called)
             self.assertTrue(v.called)
             self.assertTrue(status)
-        with nested(*patches) as (l, g, c, cu, v):
+        with nested(*patches) as (l, g, ci, c, cu, v):
             l.side_effect = YAMLDBException('')
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.validate(None, None, None, None)
             self.assertEqual(len(logs), 1)
             self.assertFalse(status)
-        with nested(*patches) as (l, g, c, cu, v):
+        with nested(*patches) as (l, g, ci, c, cu, v):
             l.return_value = (None, None)
             v.side_effect = ResourceInvalidException('')
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.validate(None, None, None, None)
             self.assertEqual(len(logs), 1)
             self.assertFalse(status)
-        with nested(*patches) as (l, g, c, cu, v):
+        with nested(*patches) as (l, g, ci, c, cu, v):
             l.return_value = (None, None)
             c.side_effect = ResourceDepsException('')
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.validate(None, None, None, None)
             self.assertEqual(len(logs), 1)
             self.assertFalse(status)
-        with nested(*patches) as (l, g, c, cu, v):
+        with nested(*patches) as (l, g, ci, c, cu, v):
             l.return_value = (None, None)
             cu.side_effect = ResourceUnicityException('')
+            eng = SFResourceBackendEngine(path, None)
+            status, logs = eng.validate(None, None, None, None)
+            self.assertEqual(len(logs), 1)
+            self.assertFalse(status)
+        with nested(*patches) as (l, g, ci, c, cu, v):
+            l.return_value = (None, None)
+            ci.side_effect = ResourceIDException('')
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.validate(None, None, None, None)
             self.assertEqual(len(logs), 1)
@@ -193,12 +205,15 @@ class EngineTest(TestCase):
     def test_direct_apply(self):
         path = tempfile.mkdtemp()
         self.to_delete.append(path)
+        id1 = str(uuid.uuid4())
         patches = [
             patch('yaml.safe_load'),
             patch('managesf.model.yamlbkd.yamlbackend.YAMLBackend.'
                   '_validate_base_struct'),
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._get_data_diff'),
+            patch('managesf.model.yamlbkd.engine.'
+                  'SFResourceBackendEngine._check_id_constraints'),
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._check_deps_constraints'),
             patch('managesf.model.yamlbkd.engine.'
@@ -210,26 +225,28 @@ class EngineTest(TestCase):
                   '_resolv_resources_need_refresh'),
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._apply_changes')]
-        with nested(*patches) as (sf, b, g, cd, cu, v, r, a):
+        with nested(*patches) as (sf, b, g, ci, cd, cu, v, r, a):
             a.return_value = False
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.direct_apply(None, None)
             self.assertTrue(status)
             self.assertEqual(len(logs), 0)
             self.assertTrue(g.called)
+            self.assertTrue(ci.called)
             self.assertTrue(cd.called)
             self.assertTrue(cu.called)
             self.assertTrue(v.called)
             self.assertTrue(r.called)
             self.assertTrue(a.called)
             self.assertTrue(status)
-        with nested(*patches) as (sf, b, g, cd, cu, v, r, a):
+        with nested(*patches) as (sf, b, g, ci, cd, cu, v, r, a):
             v.side_effect = ResourceInvalidException('')
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.direct_apply(None, None)
             self.assertFalse(status)
             self.assertEqual(len(logs), 1)
             self.assertTrue(g.called)
+            self.assertTrue(ci.called)
             self.assertTrue(cd.called)
             self.assertTrue(cu.called)
             self.assertFalse(r.called)
@@ -243,14 +260,14 @@ class EngineTest(TestCase):
             prev = "resources: {}"
             new = """resources:
   dummies:
-    id1:
+    %s:
       name: dum
       namespace: a
-"""
+""" % id1
             eng = SFResourceBackendEngine(path, None)
             status, logs = eng.direct_apply(prev, new)
             self.assertIn(
-                'id1', a.call_args[0][0]['dummies']['create'])
+                id1, a.call_args[0][0]['dummies']['create'])
             self.assertEqual(
                 len(a.call_args[0][0]['dummies']['update']), 0)
             self.assertEqual(
@@ -462,6 +479,37 @@ class EngineTest(TestCase):
                         {'masters': Master}):
             self.assertRaises(ResourceUnicityException,
                               en._check_unicity_constraints,
+                              new)
+
+    def test_check_id_constraints(self):
+        new = {
+            'resources': {
+                'dummies': {
+                    str(uuid.uuid4()): {
+                        'name': 'dummy1',
+                    }
+                }
+            }
+        }
+        en = SFResourceBackendEngine(None, None)
+        with patch.dict(engine.MAPPING,
+                        {'dummies': Dummy}):
+            en._check_id_constraints(new)
+
+        new = {
+            'resources': {
+                'dummies': {
+                    'dummy1': {
+                        'name': 'dummy1',
+                    }
+                }
+            }
+        }
+        en = SFResourceBackendEngine(None, None)
+        with patch.dict(engine.MAPPING,
+                        {'dummies': Dummy}):
+            self.assertRaises(ResourceIDException,
+                              en._check_id_constraints,
                               new)
 
     def test_check_deps_constraints(self):

@@ -257,14 +257,11 @@ class GroupOpsTest(TestCase):
             ggm.side_effect = fake_get_group_members
             logs, g_tree = o.get_all()
             self.assertListEqual(logs, [])
-            self.assertIn('g1', g_tree['groups'].keys())
-            self.assertIn('g2', g_tree['groups'].keys())
             self.assertEqual(len(g_tree['groups'].keys()), 2)
-            self.assertIn('user1@sftests.com',
-                          g_tree['groups']['g1']['members'])
-            self.assertIn('user3@sftests.com',
-                          g_tree['groups']['g1']['members'])
-            self.assertEqual(len(g_tree['groups']['g1']['members']), 2)
-            self.assertIn('user2@sftests.com',
-                          g_tree['groups']['g2']['members'])
-            self.assertEqual(len(g_tree['groups']['g2']['members']), 1)
+            g1 = [g for g in g_tree['groups'].values() if g['name'] == 'g1'][0]
+            g2 = [g for g in g_tree['groups'].values() if g['name'] == 'g2'][0]
+            self.assertIn('user1@sftests.com', g1['members'])
+            self.assertIn('user3@sftests.com', g1['members'])
+            self.assertEqual(len(g1['members']), 2)
+            self.assertIn('user2@sftests.com', g2['members'])
+            self.assertEqual(len(g2['members']), 1)

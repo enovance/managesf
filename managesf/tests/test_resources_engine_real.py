@@ -15,6 +15,8 @@
 # under the License.
 
 
+import uuid
+
 from unittest import TestCase
 from mock import patch
 from contextlib import nested
@@ -24,6 +26,8 @@ from managesf.model.yamlbkd import engine
 
 class EngineRealResourcesTest(TestCase):
     def test_group_validation(self):
+        g1_id = str(uuid.uuid4())
+        g2_id = str(uuid.uuid4())
         patches = [
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._load_resources_data'),
@@ -35,7 +39,7 @@ class EngineRealResourcesTest(TestCase):
         master = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -49,7 +53,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a cool group',
                         'members': [
@@ -68,8 +72,8 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: groups, ID: g1] is going to be updated.',
-                logs)
+                'Resource [type: groups, ID: %s] is going to be updated.' % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
@@ -80,7 +84,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a cool group',
                         'members': [
@@ -99,8 +103,8 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: groups, ID: g1] is going to be created.',
-                logs)
+                'Resource [type: groups, ID: %s] is going to be created.' % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
@@ -111,7 +115,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a cool group',
                         'members': [
@@ -119,7 +123,7 @@ class EngineRealResourcesTest(TestCase):
                             'user2@sftests.com',
                             ]
                         },
-                    'g2': {
+                    g2_id: {
                         'name': 'sf/g1',
                         'description': 'This is a another cool group',
                         'members': [
@@ -145,7 +149,7 @@ class EngineRealResourcesTest(TestCase):
         master = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -159,7 +163,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -176,14 +180,14 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: groups, ID: g1] is going to be updated.',
-                logs)
+                'Resource [type: groups, ID: %s] is going to be updated.' % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -197,7 +201,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g2': {
+                    g2_id: {
                         'name': 'sf/g2',
                         'description': 'This is a group',
                         'members': [
@@ -214,17 +218,17 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: groups, ID: g1] is going to be deleted.',
-                logs)
+                'Resource [type: groups, ID: %s] is going to be deleted.' % (
+                    g1_id), logs)
             self.assertIn(
-                'Resource [type: groups, ID: g2] is going to be created.',
-                logs)
+                'Resource [type: groups, ID: %s] is going to be created.' % (
+                    g2_id), logs)
             self.assertEqual(len(logs), 2)
 
         master = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -238,7 +242,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g2',
                         'description': 'This is a group',
                         'members': [
@@ -257,9 +261,9 @@ class EngineRealResourcesTest(TestCase):
             # Change happends on an immutable key
             self.assertFalse(valid)
             self.assertIn(
-                "Resource [type: groups, ID: g1] contains changed "
-                "resource keys that are immutable. Please check the model.",
-                logs)
+                "Resource [type: groups, ID: %s] contains changed "
+                "resource keys that are immutable. Please check the model." % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
@@ -270,7 +274,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a cool group',
                         'members': [
@@ -294,8 +298,8 @@ class EngineRealResourcesTest(TestCase):
                 "err API unable to find the member",
                 logs)
             self.assertIn(
-                "Resource [type: groups, ID: g1] extra validations failed",
-                logs)
+                "Resource [type: groups, ID: %s] extra validations failed" % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 2)
 
         patches = [
@@ -315,7 +319,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'Administrators',
                         'description': 'This is the Admin group',
                         'members': [
@@ -337,11 +341,14 @@ class EngineRealResourcesTest(TestCase):
                 'Check group name [Administrators in not managed by this API]',
                 logs)
             self.assertIn(
-                'Resource [type: groups, ID: g1] extra validations failed',
-                logs)
+                'Resource [type: groups, ID: %s] extra validations failed' % (
+                    g1_id), logs)
             self.assertEqual(len(logs), 2)
 
     def test_acls_validation(self):
+        a1_id = str(uuid.uuid4())
+        g1_id = str(uuid.uuid4())
+        g2_id = str(uuid.uuid4())
         patches = [
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._load_resources_data'),
@@ -358,9 +365,9 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': "this is a\nfake acls",
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     }
                 }
@@ -374,8 +381,8 @@ class EngineRealResourcesTest(TestCase):
             # The group on which the ACLs depends on is missing
             self.assertFalse(valid)
             self.assertIn(
-                'Resource [type: acls, ID: a1] depends on an unknown '
-                'resource [type: groups, ID: g1]',
+                'Resource [type: acls, ID: %s] depends on an unknown '
+                'resource [type: groups, ID: %s]' % (a1_id, g1_id),
                 logs)
             self.assertEqual(len(logs), 1)
 
@@ -383,7 +390,7 @@ class EngineRealResourcesTest(TestCase):
             'resources': {
                 'acls': {},
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -397,13 +404,13 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': "this is a\nfake acls",
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -421,20 +428,20 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: acls, ID: a1] is going to be created.',
-                logs)
+                'Resource [type: acls, ID: %s] is going to be created.' % (
+                    a1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': "this is a\nfake acls",
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -449,7 +456,7 @@ class EngineRealResourcesTest(TestCase):
             'resources': {
                 'acls': {},
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -467,20 +474,20 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: acls, ID: a1] is going to be deleted.',
-                logs)
+                'Resource [type: acls, ID: %s] is going to be deleted.' % (
+                    a1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': "this is a\nfake acls",
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -494,9 +501,9 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': "this is a\nfake acls",
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {},
@@ -511,8 +518,8 @@ class EngineRealResourcesTest(TestCase):
             # it has been removed between master and new
             self.assertFalse(valid)
             self.assertIn(
-                'Resource [type: acls, ID: a1] depends on an unknown '
-                'resource [type: groups, ID: g1]',
+                'Resource [type: acls, ID: %s] depends on an unknown '
+                'resource [type: groups, ID: %s]' % (a1_id, g1_id),
                 logs)
             self.assertEqual(len(logs), 1)
 
@@ -531,7 +538,7 @@ class EngineRealResourcesTest(TestCase):
             'resources': {
                 'acls': {},
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -545,7 +552,7 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': """[project]
     description = A description
 [access "refs/*"]
@@ -558,11 +565,11 @@ class EngineRealResourcesTest(TestCase):
     submit = group sf/g1
     read = group sf/g1
 """,
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -581,15 +588,15 @@ class EngineRealResourcesTest(TestCase):
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
             self.assertIn(
-                'Resource [type: acls, ID: a1] is going to be created.',
-                logs)
+                'Resource [type: acls, ID: %s] is going to be created.' % (
+                    a1_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'acls': {},
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -603,15 +610,15 @@ class EngineRealResourcesTest(TestCase):
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': """This ACL is
 wrong ! This string won't be accepted by Gerrit !
 """,
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -633,15 +640,15 @@ wrong ! This string won't be accepted by Gerrit !
             self.assertTrue(logs[0].startswith(
                 "File contains no section headers."))
             self.assertIn(
-                'Resource [type: acls, ID: a1] extra validations failed',
-                logs)
+                'Resource [type: acls, ID: %s] extra validations failed' % (
+                    a1_id), logs)
             self.assertEqual(len(logs), 2)
 
         master = {
             'resources': {
                 'acls': {},
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -655,7 +662,7 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': """[project]
     description = A description
 [access "refs/*"]
@@ -668,11 +675,11 @@ wrong ! This string won't be accepted by Gerrit !
     submit = group sf/g2
     read = group sf/g1
 """,
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -694,14 +701,14 @@ wrong ! This string won't be accepted by Gerrit !
             self.assertIn('ACLs file section (access "refs/heads/*"), key '
                           '(submit) relies on an unknown group name: sf/g2',
                           logs)
-            self.assertIn('Resource [type: acls, ID: a1] extra validations '
-                          'failed', logs)
+            self.assertIn('Resource [type: acls, ID: %s] extra validations '
+                          'failed' % a1_id, logs)
             self.assertEqual(len(logs), 2)
 
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': """[project]
     description = A description
 [access "refs/*"]
@@ -714,11 +721,11 @@ wrong ! This string won't be accepted by Gerrit !
     submit = group sf/g2
     read = group sf/g1
 """,
-                        'groups': ['g1', 'g2'],
+                        'groups': [g1_id, g2_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -726,7 +733,7 @@ wrong ! This string won't be accepted by Gerrit !
                             'user2@sftests.com',
                             ]
                         },
-                    'g2': {
+                    g2_id: {
                         'name': 'others/g2',
                         'description': 'This is a group',
                         'members': [
@@ -747,13 +754,13 @@ wrong ! This string won't be accepted by Gerrit !
             self.assertIn('ACLs file section (access "refs/heads/*"), key '
                           '(submit) relies on an unknown group name: sf/g2',
                           logs)
-            self.assertIn('Resource [type: acls, ID: a1] extra validations '
-                          'failed', logs)
+            self.assertIn('Resource [type: acls, ID: %s] extra validations '
+                          'failed' % a1_id, logs)
 
         new = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': """[project]
     description = A description
 [access "refs/*"]
@@ -766,11 +773,11 @@ wrong ! This string won't be accepted by Gerrit !
     submit = group g2
     read = group sf/g1
 """,
-                        'groups': ['g1', 'g2'],
+                        'groups': [g1_id, g2_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'description': 'This is a group',
                         'members': [
@@ -778,7 +785,7 @@ wrong ! This string won't be accepted by Gerrit !
                             'user2@sftests.com',
                             ]
                         },
-                    'g2': {
+                    g2_id: {
                         'name': 'g2',
                         'description': 'This is a group',
                         'members': [
@@ -796,6 +803,8 @@ wrong ! This string won't be accepted by Gerrit !
             valid, logs = eng.validate(None, None, None, None)
 
     def test_gitrepo_validation(self):
+        a1_id = str(uuid.uuid4())
+        r1_id = str(uuid.uuid4())
         patches = [
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._load_resources_data'),
@@ -807,7 +816,7 @@ wrong ! This string won't be accepted by Gerrit !
         master = {
             'resources': {
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
@@ -817,14 +826,14 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     }
@@ -837,22 +846,21 @@ wrong ! This string won't be accepted by Gerrit !
             eng = engine.SFResourceBackendEngine('fake', 'resources')
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
-            self.assertIn('Resource [type: repos, ID: r1] is going to '
-                          'be created.',
-                          logs)
+            self.assertIn('Resource [type: repos, ID: %s] is going to '
+                          'be created.' % r1_id, logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
@@ -861,14 +869,14 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake2',
                         }
                     }
@@ -881,24 +889,24 @@ wrong ! This string won't be accepted by Gerrit !
             eng = engine.SFResourceBackendEngine('fake', 'resources')
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
-            self.assertIn('Resource [type: acls, ID: a1] is going to '
-                          'be updated.', logs)
-            self.assertIn('Resource [type: repos, ID: r1] need a refresh '
+            self.assertIn('Resource [type: acls, ID: %s] is going to '
+                          'be updated.' % a1_id, logs)
+            self.assertIn('Resource [type: repos, ID: %s] need a refresh '
                           'as at least one of its dependencies has been '
-                          'updated', logs)
+                          'updated' % r1_id, logs)
             self.assertEqual(len(logs), 2)
 
         master = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
@@ -907,14 +915,14 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r2',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
@@ -927,18 +935,18 @@ wrong ! This string won't be accepted by Gerrit !
             # GIT repository name is immutable
             valid, logs = eng.validate(None, None, None, None)
             self.assertFalse(valid)
-            self.assertIn('Resource [type: repos, ID: r1] contains changed '
+            self.assertIn('Resource [type: repos, ID: %s] contains changed '
                           'resource keys that are immutable. Please '
-                          'check the model.', logs)
+                          'check the model.' % r1_id, logs)
             self.assertEqual(len(logs), 1)
 
         new = {
             'resources': {
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {},
@@ -951,11 +959,17 @@ wrong ! This string won't be accepted by Gerrit !
             # GIT repository relie on an unknown ACL
             valid, logs = eng.validate(None, None, None, None)
             self.assertFalse(valid)
-            self.assertIn('Resource [type: repos, ID: r1] depends on '
-                          'an unknown resource [type: acls, ID: a1]', logs)
+            self.assertIn('Resource [type: repos, ID: %s] depends on '
+                          'an unknown resource [type: acls, ID: %s]' % (
+                              r1_id, a1_id), logs)
             self.assertEqual(len(logs), 1)
 
     def test_project_validation(self):
+        a1_id = str(uuid.uuid4())
+        r1_id = str(uuid.uuid4())
+        r2_id = str(uuid.uuid4())
+        p1_id = str(uuid.uuid4())
+        g1_id = str(uuid.uuid4())
         patches = [
             patch('managesf.model.yamlbkd.engine.'
                   'SFResourceBackendEngine._load_resources_data'),
@@ -971,15 +985,15 @@ wrong ! This string won't be accepted by Gerrit !
                 'projects': {},
                 'groups': {},
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     }
                 }
@@ -987,22 +1001,22 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'projects': {
-                    'p1': {
+                    p1_id: {
                         'name': 'p1',
                         'description': 'An awesome project',
-                        'source-repositories': ['r1'],
+                        'source-repositories': [r1_id],
                     },
                 },
                 'groups': {},
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     }
@@ -1015,29 +1029,29 @@ wrong ! This string won't be accepted by Gerrit !
             eng = engine.SFResourceBackendEngine('fake', 'resources')
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
-            self.assertIn('Resource [type: projects, ID: p1] is going to '
-                          'be created.', logs)
+            self.assertIn('Resource [type: projects, ID: %s] is going to '
+                          'be created.' % p1_id, logs)
             self.assertEqual(len(logs), 1)
 
         new = {
             'resources': {
                 'projects': {
-                    'p1': {
+                    p1_id: {
                         'name': 'p1',
                         'description': 'An awesome project',
-                        'source-repositories': ['r1', 'r2'],
+                        'source-repositories': [r1_id, r2_id],
                     },
                 },
                 'groups': {},
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     }
@@ -1050,31 +1064,31 @@ wrong ! This string won't be accepted by Gerrit !
             valid, logs = eng.validate(None, None, None, None)
             # Project depends on an unknown r2 resource
             self.assertFalse(valid)
-            self.assertIn('Resource [type: projects, ID: p1] depends on '
-                          'an unknown resource [type: repos, ID: r2]',
-                          logs)
+            self.assertIn('Resource [type: projects, ID: %s] depends on '
+                          'an unknown resource [type: repos, ID: %s]' % (
+                              p1_id, r2_id), logs)
             self.assertEqual(len(logs), 1)
 
         master = {
             'resources': {
                 'projects': {
-                    'p1': {
+                    p1_id: {
                         'name': 'p1',
                         'description': 'An awesome project',
-                        'source-repositories': ['r1'],
+                        'source-repositories': [r1_id],
                     },
                 },
                 'groups': {},
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
                         }
                     },
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     }
                 }
@@ -1082,27 +1096,27 @@ wrong ! This string won't be accepted by Gerrit !
         new = {
             'resources': {
                 'projects': {
-                    'p1': {
+                    p1_id: {
                         'name': 'p1',
                         'description': 'An awesome project',
-                        'source-repositories': ['r1'],
+                        'source-repositories': [r1_id],
                     },
                 },
                 'repos': {
-                    'r1': {
+                    r1_id: {
                         'name': 'sf/r1',
                         'description': 'This is a GIT repo',
-                        'acl': 'a1'
+                        'acl': a1_id,
                         }
                     },
                 'acls': {
-                    'a1': {
+                    a1_id: {
                         'file': 'fake',
-                        'groups': ['g1'],
+                        'groups': [g1_id],
                         }
                     },
                 'groups': {
-                    'g1': {
+                    g1_id: {
                         'name': 'sf/g1',
                         'members': [],
                     },
@@ -1116,16 +1130,16 @@ wrong ! This string won't be accepted by Gerrit !
             eng = engine.SFResourceBackendEngine('fake', 'resources')
             valid, logs = eng.validate(None, None, None, None)
             self.assertTrue(valid)
-            self.assertIn('Resource [type: acls, ID: a1] is going '
-                          'to be updated.', logs)
-            self.assertIn('Resource [type: projects, ID: p1] need a '
+            self.assertIn('Resource [type: acls, ID: %s] is going '
+                          'to be updated.' % a1_id, logs)
+            self.assertIn('Resource [type: projects, ID: %s] need a '
                           'refresh as at least one of its dependencies '
-                          'has been updated', logs)
-            self.assertIn('Resource [type: groups, ID: g1] is '
-                          'going to be created.', logs)
-            self.assertIn('Resource [type: repos, ID: r1] need a '
+                          'has been updated' % p1_id, logs)
+            self.assertIn('Resource [type: groups, ID: %s] is '
+                          'going to be created.' % g1_id, logs)
+            self.assertIn('Resource [type: repos, ID: %s] need a '
                           'refresh as at least one of its dependencies '
-                          'has been updated', logs)
+                          'has been updated' % r1_id, logs)
             self.assertEqual(len(logs), 4)
 
     def test_get_missing_resources(self):
