@@ -79,33 +79,12 @@ class GroupOpsTest(TestCase):
             self.assertEqual(len(logs), 4)
 
     def test_delete(self):
-        patches = [
-            patch('pysflib.sfgerrit.GerritUtils.get_group_id'),
-            patch('pysflib.sfgerrit.GerritUtils.get_group_members'),
-            patch('pysflib.sfgerrit.GerritUtils.delete_group_member'),
-            patch('pysflib.sfgerrit.GerritUtils.get_group_group_members'),
-            patch('pysflib.sfgerrit.GerritUtils.delete_group_group_member'),
-            patch('sqlalchemy.orm.session.Session.execute'),
-        ]
         o = GroupOps(self.conf, None)
 
         kwargs = {'name': 'space/g1'}
 
-        with nested(*patches) as (ggi, ggm, dgm, gggm, dggm, exe):
-            ggm.return_value = [{'email': 'body@sftests.com'},
-                                {'email': 'body2@sftests.com'},
-                                {'email': self.conf.admin['email']}]
-            gggm.return_value = []
+        with patch('sqlalchemy.orm.session.Session.execute') as exe:
             logs = o.delete(**kwargs)
-            self.assertEqual(len(ggi.call_args_list), 1)
-            self.assertEqual(ggi.call_args_list[0],
-                             call('space/g1'))
-            self.assertEqual(len(ggm.call_args_list), 1)
-            self.assertEqual(len(dgm.call_args_list), 3)
-            self.assertListEqual([call('space/g1', 'body@sftests.com'),
-                                  call('space/g1', 'body2@sftests.com'),
-                                  call('space/g1', self.conf.admin['email'])],
-                                 dgm.call_args_list)
             self.assertEqual(call("DELETE FROM account_groups WHERE "
                                   "name='space/g1';DELETE FROM "
                                   "account_group_names WHERE "
@@ -113,40 +92,11 @@ class GroupOpsTest(TestCase):
                              exe.call_args_list[0])
             self.assertEqual(len(logs), 0)
 
-        with nested(*patches) as (ggi, ggm, dgm, gggm, dggm, exe):
-            ggm.return_value = []
-            ggi.return_value = '666'
-            gggm.return_value = [{'name': 'included_group'}]
+        with patch('sqlalchemy.orm.session.Session.execute') as exe:
+            exe.side_effect = Exception('Random Error')
             logs = o.delete(**kwargs)
-            self.assertEqual(len(ggi.call_args_list), 1)
-            self.assertEqual(len(gggm.call_args_list), 1)
-            self.assertEqual(gggm.call_args_list[0],
-                             call('666'))
-            self.assertEqual(len(dggm.call_args_list), 1)
-            self.assertEqual(call('666', 'included_group'),
-                             dggm.call_args_list[0])
-            self.assertEqual(call("DELETE FROM account_groups WHERE "
-                                  "name='space/g1';DELETE FROM "
-                                  "account_group_names WHERE "
-                                  "name='space/g1';"),
-                             exe.call_args_list[0])
-            self.assertEqual(len(logs), 0)
-
-        with nested(*patches) as (ggi, ggm, dgm, gggm, dggm, exe):
-            ggm.return_value = [{'email': 'body@sftests.com'},
-                                {'email': 'body2@sftests.com'},
-                                {'email': self.conf.admin['email']}]
-            dgm.side_effect = Exception('Random Error')
-            gggm.return_value = []
-            logs = o.delete(**kwargs)
-            self.assertIn('Group delete [del member: body@sftests.com]: '
-                          'err API returned Random Error', logs)
-            self.assertIn('Group delete [del member: body2@sftests.com]: '
-                          'err API returned Random Error', logs)
-            self.assertIn('Group delete [del member: %s]: '
-                          'err API returned Random Error' % (
-                              self.conf.admin['email']), logs)
-            self.assertEqual(len(logs), 3)
+            self.assertIn('Group delete: err SQL returned Random Error', logs)
+            self.assertEqual(len(logs), 1)
 
     def test_update(self):
         patches = [
@@ -165,7 +115,8 @@ class GroupOpsTest(TestCase):
                   'members': ['body@sftests.com', 'body2@sftests.com']}
 
         with nested(*patches) as (ggi, ggm, agm, dgm, gggm, dggm, gup):
-            ggm.return_value = [{'email': 'body3@sftests.com'}]
+            ggm.return_value = [{'email': 'body3@sftests.com'},
+                                {'id': 'John Doe'}]
             gggm.return_value = [{'name': 'included_group'}]
             logs = o.update(**kwargs)
             self.assertEqual(len(agm.call_args_list), 2)
@@ -238,7 +189,8 @@ class GroupOpsTest(TestCase):
             groups = {
                 '1': [
                     {'email': 'user1@sftests.com'},
-                    {'email': 'user3@sftests.com'}
+                    {'email': 'user3@sftests.com'},
+                    {'id': 'John Doe'}
                 ],
                 '2': [
                     {'email': 'user2@sftests.com'}

@@ -644,7 +644,7 @@ class EngineTest(TestCase):
                        'dummy.DummyOps.create') as c:
                 c.return_value = []
                 changes = {'dummies': {'create': {'myprojectid': {}}}}
-                eng._apply_changes(changes, apply_logs, {})
+                self.assertFalse(eng._apply_changes(changes, apply_logs, {}))
                 self.assertTrue(c.called)
             self.assertIn(
                 'Resource [type: dummies, ID: myprojectid] '
@@ -694,6 +694,17 @@ class EngineTest(TestCase):
                               apply_logs)
                 self.assertIn('Resource [type: dummies, ID: myprojectid2] '
                               'has been updated.',
+                              apply_logs)
+
+            # Verify an unexpected exception is properly catched
+            apply_logs = []
+            with patch('managesf.model.yamlbkd.resources.'
+                       'dummy.DummyOps.create') as c:
+                c.side_effect = Exception('Random Error msg')
+                changes = {'dummies': {'create': {'myprojectid': {}}}}
+                self.assertTrue(eng._apply_changes(changes, apply_logs, {}))
+                self.assertIn('Resource [type: dummies, ID: myprojectid] '
+                              'create op error (Random Error msg).',
                               apply_logs)
 
     def test_get_missing_resources(self):

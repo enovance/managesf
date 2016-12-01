@@ -92,7 +92,8 @@ class GroupOps(object):
                         "Group list members [%s]: err API returned "
                         "HTTP 404/409" % (gname))
                 else:
-                    groups[gname]['members'] = [m['email'] for m in members]
+                    groups[gname]['members'] = [
+                        m['email'] for m in members if 'email' in m.keys()]
             except Exception, e:
                 logs.append(
                     "Group list members [%s]: err API "
@@ -159,33 +160,6 @@ class GroupOps(object):
         Session = sqlalchemy.orm.sessionmaker(bind=engine)
         ses = Session()
 
-        # Remove all group members to avoid left overs in the DB
-        gid = self.client.get_group_id(name)
-        current_members = [u['email'] for u in
-                           self.client.get_group_members(gid)]
-        for member in current_members:
-            try:
-                ret = self.client.delete_group_member(name, member)
-                if ret is False:
-                    logs.append("Group delete [del member: %s]: "
-                                "err API returned HTTP 404/409" % member)
-            except Exception, e:
-                logs.append("Group delete [del member: %s]: "
-                            "err API returned %s" % (member, e))
-
-        # Remove all included groups members to avoid left overs in the DB
-        grps = [g['name'] for
-                g in self.client.get_group_group_members(gid)]
-        for grp in grps:
-            try:
-                ret = self.client.delete_group_group_member(gid, grp)
-                if ret is False:
-                    logs.append("Group delete [del included group %s]: "
-                                "err API returned HTTP 404/409" % grp)
-            except Exception, e:
-                logs.append("Group delete [del included group %s]: "
-                            "err API returned %s" % (grp, e))
-
         # Final group delete (Gerrit API does not provide such action)
         sql = (u"DELETE FROM account_groups WHERE name='%s';"
                u"DELETE FROM account_group_names WHERE name='%s';" %
@@ -208,7 +182,8 @@ class GroupOps(object):
 
         gid = self.client.get_group_id(name)
         current_members = [u['email'] for u in
-                           self.client.get_group_members(gid)]
+                           self.client.get_group_members(gid) if
+                           'email' in u.keys()]
         to_add = set(members) - set(current_members)
         to_del = set(current_members) - set(members)
 
