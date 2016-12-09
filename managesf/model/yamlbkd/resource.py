@@ -71,6 +71,10 @@ class BaseResource(object):
         self.id = id
         self._model_definition_validate()
         self.resource = resource
+        if "name" not in resource:
+            resource['name'] = self.id
+        if "name" not in self.MODEL:
+            self.MODEL['name'] = (str, ".*", False, "", True, "Name")
         self.mandatory_keys = set(
             [k for k, v in self.__class__.MODEL.items() if v[2]])
         self.keys = set(self.__class__.MODEL)

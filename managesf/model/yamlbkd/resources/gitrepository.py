@@ -108,6 +108,7 @@ class GitRepositoryOps(object):
             gitrepos[name]['name'] = name
             gitrepos[name]['acl'] = acl_id
             acls[acl_id] = {}
+            acls[acl_id]['name'] = "%s-acl" % name
             acls[acl_id]['file'] = acl
             acls[acl_id]['groups'] = acl_groups
             acls[acl_id]['groups'] -= set(DEFAULT_GROUPS)

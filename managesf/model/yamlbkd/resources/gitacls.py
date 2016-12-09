@@ -79,6 +79,14 @@ class ACL(BaseResource):
                    "provide the description entry in the acl file to keep "
                    "them shareable between git repositories if needed.")
     MODEL = {
+        'name': (
+            str,
+            '^([a-zA-Z0-9\-_\./])+$',
+            True,
+            None,
+            True,
+            "The ACL name",
+        ),
         'file': (
             str,
             '.*',
@@ -97,7 +105,7 @@ class ACL(BaseResource):
         ),
     }
     PRIORITY = 30
-    PRIMARY_KEY = 'file'
+    PRIMARY_KEY = 'name'
     CALLBACKS = {
         'update': lambda conf, new, kwargs: [],
         'create': lambda conf, new, kwargs: [],
