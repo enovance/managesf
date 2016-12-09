@@ -1169,7 +1169,7 @@ wrong ! This string won't be accepted by Gerrit !
                 },
                 'acls': {
                     'a1': {
-                        'file': 'fake',
+                        'name': 'fake',
                         'groups': [],
                     }
                 }
@@ -1192,11 +1192,11 @@ wrong ! This string won't be accepted by Gerrit !
             },
             'acls': {
                 'hash77': {
-                    'file': 'fake',
+                    'name': 'fake',
                     'groups': [],
                 },
                 'hash78': {
-                    'file': 'fake2',
+                    'name': 'fake2',
                     'groups': [],
                 },
             },
@@ -1226,7 +1226,7 @@ wrong ! This string won't be accepted by Gerrit !
                 'acls': {
                     'hash78': {
                         'groups': [],
-                        'file': 'fake2',
+                        'name': 'fake2',
                     }
                 },
             }

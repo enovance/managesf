@@ -157,6 +157,8 @@ class YAMLBackend(object):
                     assert isinstance(
                         resource,
                         type(RESOURCES_STRUCT['resources']['rtype']['key']))
+                    if "name" not in resource:
+                        resource["name"] = rid
         except AssertionError:
             raise YAMLDBException(
                 "Resource %s of type %s is invalid" % (resource, rtype))
