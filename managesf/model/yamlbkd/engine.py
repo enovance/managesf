@@ -240,7 +240,7 @@ class SFResourceBackendEngine(object):
                       rtype, obj in MAPPING.items()]
         return sorted(priorities, key=lambda p: p[1], reverse=True)
 
-    def _apply_changes(self, sanitized_changes, apply_logs, new):
+    def _apply_changes(self, sanitized_changes, apply_logs, new, delete=False):
         """ This method apply detected changes to services via
         the resources callbacks and add to a logs set successful
         and failed ops. Callbacks are called in the right order
@@ -264,6 +264,10 @@ class SFResourceBackendEngine(object):
                             # need to be updated
                             logs = MAPPING[rtype].CALLBACKS[ctype](
                                 conf, new, data['data'])
+                        elif ctype == 'delete' and not delete:
+                            logs = ["Can't delete resource without commit flag"
+                                    ", Add 'sf-resources: allow-delete' to"
+                                    " commit message to proceed"]
                         else:
                             r = MAPPING[rtype](rid, data)
                             r.set_defaults()
@@ -460,7 +464,7 @@ class SFResourceBackendEngine(object):
         return True, validation_logs
 
     def apply(self, repo_prev_uri, prev_ref,
-              repo_new_uri, new_ref):
+              repo_new_uri, new_ref, delete=False):
         """ Top level apply function
         """
         logger.info("Resources engine: apply resources requested"
@@ -474,7 +478,7 @@ class SFResourceBackendEngine(object):
             changes = self._get_data_diff(prev, new)
             logs = self._resolv_resources_need_refresh(changes, new)
             apply_logs.extend(logs)
-            partial = self._apply_changes(changes, apply_logs, new)
+            partial = self._apply_changes(changes, apply_logs, new, delete)
         except YAMLDBException, e:
             apply_logs.append(e.message)
             for l in apply_logs:
@@ -496,7 +500,7 @@ class SFResourceBackendEngine(object):
                               "%s_cache" % self.workdir.rstrip('/'))
         return current.get_data()
 
-    def direct_apply(self, prev, new):
+    def direct_apply(self, prev, new, delete=False):
         """ Top level direct_apply function. This function should be
         called only under specific conditions.
 
@@ -527,7 +531,8 @@ class SFResourceBackendEngine(object):
             self._validate_changes(changes, direct_apply_logs, new)
             direct_apply_logs.extend(
                 self._resolv_resources_need_refresh(changes, new))
-            partial = self._apply_changes(changes, direct_apply_logs, new)
+            partial = self._apply_changes(changes, direct_apply_logs, new,
+                                          delete)
         except (YAMLDBException,
                 ModelInvalidException,
                 ResourceInvalidException,
