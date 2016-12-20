@@ -575,3 +575,17 @@ class SFResourceBackendEngine(object):
         for l in logs:
             logger.info(l)
         return logs, ret_tree
+
+
+def get_resources():
+    return SFResourceBackendEngine(
+        os.path.join(conf.resources['workdir'], 'read'),
+        conf.resources['subdir']).get(conf.resources['master_repo'],
+                                      'master')['resources']
+
+
+def get_project_by_repo(reponame):
+    for _, project in get_resources().get('projects', {}).items():
+        if reponame in project.get('source-repositories', []):
+            return project
+    return None
