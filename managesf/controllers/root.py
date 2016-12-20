@@ -31,6 +31,7 @@ from managesf.services import base, gerrit
 from managesf.services import exceptions
 from managesf import policy
 from managesf.model.yamlbkd.engine import SFResourceBackendEngine
+from managesf.model.yamlbkd.engine import get_project_by_repo
 
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ CLIENTERRORMSG = "Unable to process your request, failed with "\
 # instanciate service plugins
 SF_SERVICES = []
 DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard', 'SFJenkins']
+SERVICES = {}
 
 
 def load_services():
@@ -68,6 +70,7 @@ def load_services():
                                           invoke_on_load=True,
                                           invoke_args=(conf,)).driver
             SF_SERVICES.append(plugin)
+            SERVICES[service] = plugin
             logger.info('%s plugin loaded successfully' % service)
         except Exception as e:
             logger.error('Could not load service %s: %s' % (service, e))
@@ -1034,50 +1037,38 @@ class HtpasswdController(RestController):
 class HooksController(RestController):
 
     @expose('json')
-    def post(self, hook_name, service_name=None):
-        """Trigger hook {hook_name} across all services. If {service_name}
-        is set, trigger the hook only for that service."""
+    def post(self, hook_name):
+        """Trigger hook {hook_name}."""
         _policy = 'managesf.hooks:trigger'
         if not authorize(_policy,
                          target={}):
             return abort(401,
                          detail='Failure to comply with policy %s' % _policy)
-        d = request.json if request.content_length else {}
-        hooks_feedback = {}
-        unavailable_hooks = 0
-        return_code = 200
-        if service_name:
-            services = [i for i in SF_SERVICES
-                        if i.service_name == service_name]
+        change = request.json if request.content_length else {}
+        # Get issue-tracker configuration for project
+        project = get_project_by_repo(change.get('project'))
+        if not project:
+            logger.info("Hooks: Repository %s is not part of any project" %
+                        change.get('project'))
+            tracker = None
         else:
-            services = SF_SERVICES
-        if not services:
-            return_code = 404
-            response.status = return_code
-            hooks_feedback['hook_name'] = hook_name
-            hooks_feedback[service_name] = 'Unknown service'
-            return hooks_feedback
-        for s in services:
-            try:
-                hooks_feedback[s.service_name] = getattr(s.hooks,
-                                                         hook_name)(**d)
-            except exceptions.UnavailableActionError as e:
-                hooks_feedback[s.service_name] = unicode(e)
-                unavailable_hooks += 1
-                logger.debug('[%s] hook %s is not defined' % (s.service_name,
-                                                              hook_name))
-            except Exception as e:
-                hooks_feedback[s.service_name] = unicode(e)
-                return_code = 400
-                msg = u'[%s] hook %s failed with error: %s'
-                logger.debug(msg % (s.service_name,
-                                    hook_name,
-                                    unicode(e)))
-        if len(SF_SERVICES) == unavailable_hooks:
-            return_code = 404
-        response.status = return_code
-        hooks_feedback['hook_name'] = hook_name
-        return hooks_feedback
+            tracker = project.get('issue-tracker')
+        # If no tracker, assume internal redmine
+        if tracker not in ('SFRedmine', 'SFStoryboard'):
+            logger.info("Hooks: Unknown tracker %s, defaulting to redmine" %
+                        tracker)
+            tracker = 'SFRedmine'
+
+        status = 200
+        try:
+            msg = getattr(SERVICES[tracker].hooks, hook_name)(**change)
+        except Exception as e:
+            status = 400
+            msg = unicode(e)
+            logger.error("[%s] hook %s failed with %s" % (
+                tracker, hook_name, msg))
+        response.status = status
+        return {'msg': msg}
 
 
 class TestsController(RestController):
