@@ -575,3 +575,9 @@ class SFResourceBackendEngine(object):
         for l in logs:
             logger.info(l)
         return logs, ret_tree
+
+
+def get_resources():
+    return SFResourceBackendEngine(
+        os.path.join(conf.resources['workdir'], 'read'),
+        conf.resources['subdir']).get(conf.resources['master_repo'], 'master')
