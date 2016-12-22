@@ -436,6 +436,61 @@ class TestPolicyEngine(TestCase):
         self.assertTrue(policy.authorize('managesf.job:stop',
                                          {}, credentials))
 
+    def test_nodes_policies(self):
+        """Test the default nodes endpoint policies"""
+        credentials = {}
+        self.assertTrue(policy.authorize('managesf.node:get',
+                                         {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:hold',
+                                          {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:delete',
+                                          {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:add_authorized_key',
+                                          {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-get',
+                                         {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:image-update',
+                                          {}, credentials))
+        credentials = {'username': 'shimajiro'}
+        self.assertTrue(policy.authorize('managesf.node:get',
+                                         {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:hold',
+                                          {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:delete',
+                                          {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:add_authorized_key',
+                                          {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-get',
+                                         {}, credentials))
+        self.assertFalse(policy.authorize('managesf.node:image-update',
+                                          {}, credentials))
+        credentials = {'username': 'admin'}
+        self.assertTrue(policy.authorize('managesf.node:get',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:hold',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:delete',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:add_authorized_key',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-get',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-update',
+                                         {}, credentials))
+        credentials = {'username': 'SF_SERVICE_USER'}
+        self.assertTrue(policy.authorize('managesf.node:get',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:hold',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:delete',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:add_authorized_key',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-get',
+                                         {}, credentials))
+        self.assertTrue(policy.authorize('managesf.node:image-update',
+                                         {}, credentials))
+
     def test_default_policies(self):
         """Test the default policies that come with a default deployment"""
         credentials = {}
@@ -560,7 +615,8 @@ class TestPolicyEngineFromFile(TestCase):
                        'storyboard': c.storyboard,
                        'pages': c.pages,
                        'policy': c.policy,
-                       'jenkins': c.jenkins, }
+                       'jenkins': c.jenkins,
+                       'nodepool': c.nodepool, }
         pol_file = tempfile.mkstemp()[1] + '.yaml'
         with open(pol_file, 'w') as p:
             yaml.dump(
