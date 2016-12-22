@@ -45,7 +45,8 @@ CLIENTERRORMSG = "Unable to process your request, failed with "\
 
 # instanciate service plugins
 SF_SERVICES = []
-DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard', 'SFJenkins']
+DEFAULT_SERVICES = ['SFGerrit', 'SFRedmine', 'SFStoryboard',
+                    'SFJenkins', 'SFNodepoolSSH']
 
 
 def load_services():
@@ -1205,6 +1206,150 @@ class ResourcesController(RestController):
         return logs
 
 
+class AgentsController(RestController):
+
+    class ImageController(RestController):
+        @expose('json')
+        def get(self, provider_name=None, image_name=None, **kwargs):
+            _policy = 'managesf.node:image-get'
+            if not authorize(_policy,
+                             target={"image_name": image_name,
+                                     "provider_name": provider_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            try:
+                results = {}
+                for provider in AGENTSPROVIDERS:
+                    r = provider.image.get(provider_name, image_name)
+                    results[provider.service_name] = r
+                response.status = 200
+                return results
+            except Exception as e:
+                response.status = 500
+                return {'error_description': unicode(e)}
+
+        @expose('json')
+        def put(self, provider_name, image_name, **kwargs):
+            _policy = 'managesf.node:image-update'
+            if not authorize(_policy,
+                             target={"image_name": image_name,
+                                     "provider_name": provider_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            try:
+                results = {}
+                for provider in AGENTSPROVIDERS:
+                    r = provider.image.update(provider_name, image_name)
+                    results[provider.service_name] = r
+                response.status = 201
+                return results
+            except Exception as e:
+                response.status = 500
+                return {'error_description': unicode(e)}
+
+    class SSHKeyController(RestController):
+        @expose('json')
+        def post(self, node_id, public_key, user=None):
+            try:
+                node_id = int(node_id)
+            except:
+                response.status = 400
+                return {'error_description': 'Node id must be an integer'}
+            _policy = 'managesf.node:add_authorized_key'
+            if not authorize(_policy,
+                             target={"node_id": node_id, }):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            try:
+                results = {}
+                for provider in AGENTSPROVIDERS:
+                    provider.node.add_authorized_key(node_id, public_key, user)
+                    results[provider.service_name] = 'OK'
+                response.status = 201
+                return results
+            except Exception as e:
+                response.status = 500
+                return {'error_description': unicode(e)}
+
+    image = ImageController()
+    authorize_key = SSHKeyController()
+    
+    @expose('json')
+    def get(self, node_id=None):
+        try:
+            node_id = int(node_id)
+        except:
+            response.status = 400
+            return {'error_description': 'Node id must be an integer'}
+        _policy = 'managesf.node:get'
+        if not authorize(_policy,
+                         target={"node_id": node_id, }):
+            msg = 'Failure to comply with policy %s' % _policy
+            return abort(401,
+                         detail=msg)
+        try:
+            results = {}
+            for provider in AGENTSPROVIDERS:
+                r = provider.node.get(node_id)
+                results[provider.service_name] = r
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': unicode(e)}
+
+    @expose('json')
+    def post(self, node_id):
+        try:
+            node_id = int(node_id)
+        except:
+            response.status = 400
+            return {'error_description': 'Node id must be an integer'}
+        _policy = 'managesf.node:hold'
+        if not authorize(_policy,
+                         target={"node_id": node_id, }):
+            msg = 'Failure to comply with policy %s' % _policy
+            return abort(401,
+                         detail=msg)
+        try:
+            results = {}
+            for provider in AGENTSPROVIDERS:
+                provider.node.hold(node_id)
+                results[provider.service_name] = provider.node.get(node_id)
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': unicode(e)}
+
+    @expose('json')
+    def delete(self, node_id):
+        try:
+            node_id = int(node_id)
+        except:
+            response.status = 400
+            return {'error_description': 'Node id must be an integer'}
+        _policy = 'managesf.node:delete'
+        if not authorize(_policy,
+                         target={"node_id": node_id, }):
+            msg = 'Failure to comply with policy %s' % _policy
+            return abort(401,
+                         detail=msg)
+        try:
+            results = {}
+            for provider in AGENTSPROVIDERS:
+                provider.node.delete(node_id)
+                results[provider.service_name] = provider.node.get(node_id)
+            response.status = 200
+            return results
+        except Exception as e:
+            response.status = 500
+            return {'error_description': unicode(e)}
+
+
 class JobController(RestController):
 
     class JobLogsController(RestController):
@@ -1360,6 +1505,10 @@ JOBRUNNERS = [s for s in SF_SERVICES
               if isinstance(s, base.BaseJobRunnerServicePlugin)]
 
 
+AGENTSPROVIDERS = [s for s in SF_SERVICES
+                   if isinstance(s, base.BaseAgentProviderServicePlugin)]
+
+
 class RootController(object):
     project = ProjectController()
     backup = BackupController()
@@ -1375,3 +1524,4 @@ class RootController(object):
     pages = PagesController()
     resources = ResourcesController()
     jobs = JobsController()
+    agents = AgentsController()
