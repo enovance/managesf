@@ -24,6 +24,7 @@ class dummy_conf():
                 'SFRedmine',
                 'SFStoryboard',
                 'SFJenkins',
+                'SFNodepoolSSH',
                 ]
     gerrit = {
         'user': 'gerrit',
@@ -56,6 +57,11 @@ class dummy_conf():
         'api_url': 'http://jenkins.tests.dom:8080/jenkins/',
         'user': 'jenkins',
         'password': 'jenkins_password_or_api_token',
+    }
+    nodepool = {
+        'host': 'nodepool.tests.dom',
+        'user': 'nodepool',
+        'key': '/path/to/key',
     }
     managesf = {
         'host': 'managesf.tests.dom',
