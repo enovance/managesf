@@ -82,7 +82,8 @@ class FunctionalTest(TestCase):
                        'pages': c.pages,
                        'policy': c.policy,
                        'resources': c.resources,
-                       'jenkins': c.jenkins, }
+                       'jenkins': c.jenkins,
+                       'nodepool': c.nodepool, }
         # deactivate loggin that polute test output
         # even nologcapture option of nose effetcs
         # 'logging': c.logging}
@@ -1655,7 +1656,8 @@ Review: blop
                 j = json.loads(resp.body)
                 # +1 from adding the name of the hook
                 self.assertEqual(len(self.config['services']) + 1,
-                                 len(j))
+                                 len(j),
+                                 j)
                 self.assertEqual('patchset_created',
                                  j['hook_name'])
                 self.assertEqual('Success',
