@@ -42,6 +42,7 @@ class GitRepositoryOpsTest(TestCase):
 
         kwargs = {'name': 'space/g1',
                   'description': 'A description',
+                  'local-tracker': '',
                   'acl': 'a1'}
 
         with patch('pysflib.sfgerrit.GerritUtils.create_project') as cp, \
@@ -180,8 +181,8 @@ class GitRepositoryOpsTest(TestCase):
                     GitRepositoryOps, 'install_git_review_file') as ig:
                 ia.return_value = ['log']
                 ig.return_value = ['log2']
-                o = GitRepositoryOps(None, None)
-                logs = o.update(k='v')
+                o = GitRepositoryOps(self.conf, None)
+                logs = o.update(**{'k': 'v', 'local-tracker': ''})
                 self.assertTrue(ia.called)
                 self.assertTrue(ig.called)
                 self.assertIn('log', logs)
