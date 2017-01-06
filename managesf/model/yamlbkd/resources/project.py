@@ -16,6 +16,50 @@
 
 from managesf.model.yamlbkd.resource import BaseResource
 
+from managesf.model.yamlbkd.resources.storyboard import StoryboardOps
+
+
+class ProjectOps(object):
+
+    def __init__(self, conf, new):
+        self.conf = conf
+        self.new = new
+        self.client = None
+        self.stb_ops = StoryboardOps(conf, new)
+
+    def create(self, **kwargs):
+        logs = []
+        if self.stb_ops.is_activated(**kwargs):
+            try:
+                self.stb_ops.update_project_groups(**kwargs)
+            except Exception, e:
+                logs.append("Update Storyboard project group : err: %s" % e)
+        return logs
+
+    def update(self, **kwargs):
+        logs = []
+        if self.stb_ops.is_activated(**kwargs):
+            try:
+                self.stb_ops.update_project_groups(**kwargs)
+            except Exception, e:
+                logs.append("Update Storyboard project group: err: %s" % e)
+        return logs
+
+    def delete(self, **kwargs):
+        logs = []
+        if self.stb_ops.is_activated(**kwargs):
+            try:
+                self.stb_ops.delete_project_groups(**kwargs)
+            except Exception, e:
+                logs.append("Update Storyboard project group: err: %s" % e)
+        return logs
+
+    def extra_validations(self, **kwargs):
+        logs = []
+        if self.stb_ops.is_activated(**kwargs):
+            logs.extend(self.stb_ops.extra_validations(**kwargs))
+        return logs
+
 
 class Project(BaseResource):
 
@@ -59,13 +103,21 @@ class Project(BaseResource):
             True,
             "The project documentation link",
         ),
-        'issue-tracker': (
+        'issue-tracker-url': (
             str,
             '.*',
             False,
             "",
             True,
             "The project issue tracker link",
+        ),
+        'issue-tracker': (
+            str,
+            '^(SFStoryboard|)$',
+            False,
+            "",
+            True,
+            "The local issue tracker activated for this project",
         ),
         'mailing-lists': (
             list,
@@ -95,10 +147,14 @@ class Project(BaseResource):
     PRIORITY = 10
     PRIMARY_KEY = 'name'
     CALLBACKS = {
-        'update': lambda conf, new, kwargs: [],
-        'create': lambda conf, new, kwargs: [],
-        'delete': lambda conf, new, kwargs: [],
-        'extra_validations': lambda conf, new, kwargs: [],
+        'update': lambda conf, new, kwargs:
+            ProjectOps(conf, new).update(**kwargs),
+        'create': lambda conf, new, kwargs:
+            ProjectOps(conf, new).create(**kwargs),
+        'delete': lambda conf, new, kwargs:
+            ProjectOps(conf, new).delete(**kwargs),
+        'extra_validations': lambda conf, new, kwargs:
+            ProjectOps(conf, new).extra_validations(**kwargs),
         'get_all': lambda conf, new: ([], {}),
     }
 
