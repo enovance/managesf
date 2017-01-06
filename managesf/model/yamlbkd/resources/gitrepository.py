@@ -23,6 +23,8 @@ from managesf.model.yamlbkd.resource import BaseResource
 from managesf.services.gerrit import utils
 from managesf.controllers.utils import template
 
+from managesf.model.yamlbkd.resources.storyboard import StoryboardOps
+
 # ## DEBUG statements to ease run that standalone ###
 # import logging
 # logging.basicConfig()
@@ -33,7 +35,7 @@ from managesf.controllers.utils import template
 #
 # from pecan import configuration
 # from managesf.model.yamlbkd.resources.gitrepository import GitRepositoryOps
-# conf = configuration.conf_from_file('/var/www/managesf/config.py')
+# conf = configuration.conf_from_file('/etc/managesf/config.py')
 # g = GitRepositoryOps(conf, {})
 # g._set_client()
 # ###
@@ -49,6 +51,7 @@ class GitRepositoryOps(object):
         self.conf = conf
         self.new = new
         self.client = None
+        self.stb_ops = StoryboardOps(conf)
 
     def _set_client(self):
         if not self.client:
@@ -135,6 +138,13 @@ class GitRepositoryOps(object):
         logs.extend(self.install_acl(**kwargs))
         logs.extend(self.install_git_review_file(**kwargs))
 
+        if ("SFStoryboard" in self.conf.services and
+                kwargs['local-tracker'] == "SFStoryboard"):
+            try:
+                self.stb_ops.update_project(**kwargs)
+            except Exception, e:
+                logs.append("Create Storyboard project: err: %s" % e)
+
         return logs
 
     def delete(self, **kwargs):
@@ -157,6 +167,13 @@ class GitRepositoryOps(object):
 
         logs.extend(self.install_acl(**kwargs))
         logs.extend(self.install_git_review_file(**kwargs))
+
+        if ("SFStoryboard" in self.conf.services and
+                kwargs['local-tracker'] == "SFStoryboard"):
+            try:
+                self.stb_ops.update_project(**kwargs)
+            except Exception, e:
+                logs.append("Update Storyboard project: err: %s" % e)
 
         return logs
 
@@ -244,6 +261,16 @@ global:Registered-Users\tRegistered Users"""
             logs.append(str(e))
         return logs
 
+    def extra_validations(self, **kwargs):
+        """ This checks verify additionnal elements
+        on the resource instance.
+        """
+        if ("SFStoryboard" in self.conf.services and
+                kwargs['local-tracker'] == "SFStoryboard"):
+            return self.stb_ops.extra_validations(**kwargs)
+        else:
+            return []
+
 
 class GitRepository(BaseResource):
 
@@ -259,6 +286,14 @@ class GitRepository(BaseResource):
             "",
             False,
             "The repository name",
+        ),
+        'local-tracker': (
+            str,
+            '^(SFStoryboard|)$',
+            False,
+            "",
+            True,
+            "The local issue tracker activated for this repository",
         ),
         'description': (
             str,
@@ -286,7 +321,8 @@ class GitRepository(BaseResource):
             GitRepositoryOps(conf, new).create(**kwargs),
         'delete': lambda conf, new, kwargs:
             GitRepositoryOps(conf, new).delete(**kwargs),
-        'extra_validations': lambda conf, new, kwargs: [],
+        'extra_validations': lambda conf, new, kwargs:
+            GitRepositoryOps(conf, new).extra_validations(**kwargs),
         'get_all': lambda conf, new:
             GitRepositoryOps(conf, new).get_all(),
     }
