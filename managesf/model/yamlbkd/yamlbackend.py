@@ -55,6 +55,7 @@ class YAMLBackend(object):
         self.cache_path = cache_path
         self.cache_path_hash = "%s_%s" % (cache_path, '_hash')
         self.db_path = os.path.join(self.clone_path, sub_dir)
+        self.sub_dir = sub_dir
         self.rids = {}
         self.refresh()
 
@@ -100,7 +101,17 @@ class YAMLBackend(object):
                         self.git_repo_url))
         if self.git_ref == 'master^1':
             repo.execute(['git', 'fetch', 'origin', 'master'])
-            repo.execute(['git', 'checkout', 'FETCH_HEAD^1'])
+            ret = repo.execute(
+                ['git', 'log', '-n', '2', '--no-merges',
+                 '--format="%H"', 'FETCH_HEAD',
+                 '--', self.sub_dir]).split('\n')
+            head = ret[0].strip('"')
+            head_1 = ret[1].strip('"')
+            logger.info("HEAD commit on master:%s is %s" % (
+                self.sub_dir, head))
+            logger.info("HEAD^1 commit on master:%s is %s" % (
+                self.sub_dir, head_1))
+            repo.execute(['git', 'checkout', head_1])
         else:
             repo.execute(['git', 'fetch', '-f', 'origin',
                           '%s:refs/remotes/origin/myref' % self.git_ref])
