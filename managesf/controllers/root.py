@@ -107,7 +107,7 @@ def authorize(rule_name, target):
         request.remote_user = request.headers.get('X-Remote-User')
     credentials = {'username': request.remote_user, 'groups': []}
     # TODO(mhu) this must be independent from gerrit
-    if request.remote_user:
+    if request.remote_user and request.remote_user != "(null)":
         code_review = [s for s in SF_SERVICES
                        if isinstance(s, base.BaseCodeReviewServicePlugin)][0]
         user_groups = code_review.project.get_user_groups(request.remote_user)
