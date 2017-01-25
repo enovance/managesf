@@ -226,23 +226,23 @@ class TestSFNodepoolManager(BaseSFNodepoolService):
         self.assertRaisesRegexp(Exception, "99",
                                 self.nodepool.image.get)
 
-#    @patch('managesf.services.nodepool.paramiko')
-#    def test_image_update(self, paramiko):
-#        self.assertRaisesRegexp(Exception, "invalid provider",
-#                                self.nodepool.image.update,
-#                                provider_name="-h; rm -rf /; echo ",
-#                                image_name="PWNED")
-#        self.assertRaisesRegexp(Exception, "invalid provider",
-#                                self.nodepool.image.update,
-#                                image_name="-h; rm -rf /; echo ",
-#                                provider_name="PWNED")
-#        stdout = 'rebuilding image'
-#        stderr = ''
-#        paramiko.SSHClient().exec_command.return_value = (StringIO(''),
-#                                                          StringIO(stdout),
-#                                                          StringIO(stderr))
-#        u = self.nodepool.image.update('provider', 'image')
-#        m = ('nodepool -l /etc/nodepool/logging.conf '
-#             'image-update provider image')
-#        paramiko.SSHClient().exec_command.assert_called_with(m, get_pty=True)
-#        self.assertEqual(stdout, u.read(), u)
+    @patch('managesf.services.nodepool.paramiko')
+    def test_image_update(self, paramiko):
+        self.assertRaisesRegexp(Exception, "invalid provider",
+                                self.nodepool.image.update,
+                                provider_name="-h; rm -rf /; echo ",
+                                image_name="PWNED")
+        self.assertRaisesRegexp(Exception, "invalid provider",
+                                self.nodepool.image.update,
+                                image_name="-h; rm -rf /; echo ",
+                                provider_name="PWNED")
+        stdout = 'rebuilding image'
+        stderr = ''
+        paramiko.SSHClient().exec_command.return_value = (StringIO(''),
+                                                          StringIO(stdout),
+                                                          StringIO(stderr))
+        u = self.nodepool.image.update('provider', 'image')
+        m = ('nodepool -l /etc/nodepool/logging.conf '
+             'image-update provider image')
+        paramiko.SSHClient().exec_command.assert_called_with(m, get_pty=True)
+        self.assertEqual(stdout, u.read(), u)

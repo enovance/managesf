@@ -1237,25 +1237,25 @@ class NodesController(RestController):
                 results[provider.service_name] = d
             return results
 
-#        @expose()
-#        def put(self, provider_name, image_name, **kwargs):
-#            _policy = 'managesf.node:image-update'
-#            if not authorize(_policy,
-#                             target={"image": image_name,
-#                                     "provider": provider_name}):
-#                msg = 'Failure to comply with policy %s' % _policy
-#                return abort(401,
-#                             detail=msg)
-#            provider = AGENTSPROVIDERS[0]
-#            try:
-#                results = provider.image.update(provider_name, image_name)
-#                response.status = 201
-#                response.app_iter = results
-#            except Exception as e:
-#                response.status = 500
-#                response.content_type = 'application/json'
-#                d = {provider.service_name: {'error_description': unicode(e)}}
-#                return d
+        @expose()
+        def put(self, provider_name, image_name, **kwargs):
+            _policy = 'managesf.node:image-update'
+            if not authorize(_policy,
+                             target={"image": image_name,
+                                     "provider": provider_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            provider = AGENTSPROVIDERS[0]
+            try:
+                results = provider.image.update(provider_name, image_name)
+                response.status = 201
+                response.app_iter = results
+            except Exception as e:
+                response.status = 500
+                response.content_type = 'application/json'
+                d = {provider.service_name: {'error_description': unicode(e)}}
+                return d
 
     class NodeByIdController(RestController):
 
