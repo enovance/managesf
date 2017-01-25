@@ -22,7 +22,7 @@ from pecan import conf
 from pecan import expose
 from pecan import abort
 from pecan.rest import RestController
-from pecan import request, response
+from pecan import request, response, Response
 from stevedore import driver
 
 from managesf.controllers import backup, localuser, introspection, htp, pages
@@ -1237,25 +1237,27 @@ class NodesController(RestController):
                 results[provider.service_name] = d
             return results
 
-#        @expose()
-#        def put(self, provider_name, image_name, **kwargs):
-#            _policy = 'managesf.node:image-update'
-#            if not authorize(_policy,
-#                             target={"image": image_name,
-#                                     "provider": provider_name}):
-#                msg = 'Failure to comply with policy %s' % _policy
-#                return abort(401,
-#                             detail=msg)
-#            provider = AGENTSPROVIDERS[0]
-#            try:
-#                results = provider.image.update(provider_name, image_name)
-#                response.status = 201
-#                response.app_iter = results
-#            except Exception as e:
-#                response.status = 500
-#                response.content_type = 'application/json'
-#                d = {provider.service_name: {'error_description': unicode(e)}}
-#                return d
+        @expose()
+        def put(self, provider_name, image_name, **kwargs):
+            _policy = 'managesf.node:image-update'
+            if not authorize(_policy,
+                             target={"image": image_name,
+                                     "provider": provider_name}):
+                msg = 'Failure to comply with policy %s' % _policy
+                return abort(401,
+                             detail=msg)
+            provider = AGENTSPROVIDERS[0]
+            try:
+                results = provider.image.update(provider_name, image_name)
+                res = Response(content_type='text/event-stream',
+                               status=201,
+                               app_iter=results)
+                return res
+            except Exception as e:
+                response.status = 500
+                response.content_type = 'application/json'
+                d = {provider.service_name: {'error_description': unicode(e)}}
+                return d
 
     class NodeByIdController(RestController):
 

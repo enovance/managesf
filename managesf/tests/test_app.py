@@ -17,9 +17,9 @@ import json
 import shutil
 import base64
 import tempfile
-# from StringIO import StringIO
-# import time
-# import random
+from StringIO import StringIO
+import time
+import random
 
 from unittest import TestCase
 from webtest import TestApp
@@ -1847,18 +1847,18 @@ class TestJobsController(FunctionalTest):
                                 j)
 
 
-# class SlowStringIO(StringIO):
-#    def __init__(self, contents, max_wait=2):
-#        StringIO.__init__(self, contents)
-#        self.max_wait = max_wait
+class SlowStringIO(StringIO):
+    def __init__(self, contents, max_wait=2):
+        StringIO.__init__(self, contents)
+        self.max_wait = max_wait
 
-#    def __iter__(self):
-#        return self
+    def __iter__(self):
+        return self
 
-#    def next(self):
-#        wait = random.random() * self.max_wait
-#        time.sleep(wait)
-#        return StringIO.next(self)
+    def next(self):
+        wait = random.random() * self.max_wait
+        time.sleep(wait)
+        return StringIO.next(self)
 
 
 class TestNodesController(FunctionalTest):
@@ -2055,18 +2055,18 @@ class TestNodesController(FunctionalTest):
                 self.assertEqual(2,
                                  len(j))
 
-#    def test_image_update(self):
-#        with patch.object(SFGerritProjectManager, 'get_user_groups'):
-#            environ = {'REMOTE_USER': 'SF_SERVICE_USER'}
-#            with patch.object(SFNIM, 'update') as update:
-#                update.return_value = SlowStringIO('well that went OK' * 4096,
-#                                                   max_wait=10)
-#                resp = self.app.put('/nodes/image/blip/blop/',
-#                                    extra_environ=environ, status="*")
-#                update.assert_called_with("blip", "blop")
-#                self.assertEqual(201, resp.status_int, resp.body)
-#                self.assertEqual('well that went OK' * 4096,
-#                                 resp.body)
+    def test_image_update(self):
+        with patch.object(SFGerritProjectManager, 'get_user_groups'):
+            environ = {'REMOTE_USER': 'SF_SERVICE_USER'}
+            with patch.object(SFNIM, 'update') as update:
+                update.return_value = SlowStringIO('well that went OK' * 4096,
+                                                   max_wait=10)
+                resp = self.app.put('/nodes/image/blip/blop/',
+                                    extra_environ=environ, status="*")
+                update.assert_called_with("blip", "blop")
+                self.assertEqual(201, resp.status_int, resp.body)
+                self.assertEqual('well that went OK' * 4096,
+                                 resp.body)
 
 
 class TestResourcesController(FunctionalTest):
