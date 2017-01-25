@@ -19,7 +19,7 @@ import logging
 
 from managesf.services import base
 from managesf.services.nodepool.common import get_values, get_age
-# from managesf.services.nodepool.common import validate_input
+from managesf.services.nodepool.common import validate_input
 
 
 logger = logging.getLogger(__name__)
@@ -70,20 +70,24 @@ class SFNodepoolImageManager(base.ImageManager):
                 images_info.append(image)
         return images_info
 
-# TODO look more into the app_iter mechanism before going this way
-#    def update(self, provider_name, image_name):
-#        """updates (rebuild) the image image_name on provider provider_name"""
-#        if (not validate_input(provider_name) or
-#           not validate_input(image_name)):
-#            msg = "invalid provider %r and/or image %r" % (provider_name,
-#                                                           image_name)
-#            raise Exception(msg)
-#        client = self.plugin.get_client()
-#        args = {'provider': provider_name,
-#                'image': image_name}
-#        logger.debug("[%s] calling %s" % (self.plugin.service_name,
-#                                          UPDATE_CMD % args))
-#        cmd = UPDATE_CMD % args
-#        stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
-#        client.close()
-#        return stdout
+    def update(self, provider_name, image_name):
+        """updates (rebuild) the image image_name on provider provider_name"""
+        if (not validate_input(provider_name) or
+           not validate_input(image_name)):
+            msg = "invalid provider %r and/or image %r" % (provider_name,
+                                                           image_name)
+            raise Exception(msg)
+        return self._update(provider_name, image_name)
+
+    def _update(self, provider_name, image_name):
+        client = self.plugin.get_client()
+        args = {'provider': provider_name,
+                'image': image_name}
+        logger.debug("[%s] calling %s" % (self.plugin.service_name,
+                                          UPDATE_CMD % args))
+        cmd = UPDATE_CMD % args
+        stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
+        while not stdout.channel.exit_status_ready():
+            c = stdout.read(1)
+            yield c
+        client.close()

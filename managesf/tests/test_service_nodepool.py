@@ -18,6 +18,7 @@
 from StringIO import StringIO
 from unittest import TestCase
 from mock import patch, ANY
+import time
 
 from managesf.services import nodepool
 from managesf.tests import dummy_conf
@@ -37,9 +38,16 @@ IMAGE_GET_STDOUT += "| 2383 | rcip-prod | sfstack-centos-7           | template-
 class Fakechannel:
     def __init__(self, code):
         self.code = code
+        self.start = time.time()
 
     def recv_exit_status(self):
         return self.code
+
+    # simulate execution time
+    def exit_status_ready(self):
+        if time.time() - self.start > 2:
+            return True
+        return False
 
 
 class Stdout(StringIO):
@@ -226,23 +234,25 @@ class TestSFNodepoolManager(BaseSFNodepoolService):
         self.assertRaisesRegexp(Exception, "99",
                                 self.nodepool.image.get)
 
-#    @patch('managesf.services.nodepool.paramiko')
-#    def test_image_update(self, paramiko):
-#        self.assertRaisesRegexp(Exception, "invalid provider",
-#                                self.nodepool.image.update,
-#                                provider_name="-h; rm -rf /; echo ",
-#                                image_name="PWNED")
-#        self.assertRaisesRegexp(Exception, "invalid provider",
-#                                self.nodepool.image.update,
-#                                image_name="-h; rm -rf /; echo ",
-#                                provider_name="PWNED")
-#        stdout = 'rebuilding image'
-#        stderr = ''
-#        paramiko.SSHClient().exec_command.return_value = (StringIO(''),
-#                                                          StringIO(stdout),
-#                                                          StringIO(stderr))
-#        u = self.nodepool.image.update('provider', 'image')
-#        m = ('nodepool -l /etc/nodepool/logging.conf '
-#             'image-update provider image')
-#        paramiko.SSHClient().exec_command.assert_called_with(m, get_pty=True)
-#        self.assertEqual(stdout, u.read(), u)
+    @patch('managesf.services.nodepool.paramiko')
+    def test_image_update(self, paramiko):
+        self.assertRaisesRegexp(Exception, "invalid provider",
+                                self.nodepool.image.update,
+                                provider_name="-h; rm -rf /; echo ",
+                                image_name="PWNED")
+        self.assertRaisesRegexp(Exception, "invalid provider",
+                                self.nodepool.image.update,
+                                image_name="-h; rm -rf /; echo ",
+                                provider_name="PWNED")
+        stdout = 'rebuilding image'
+        stderr = ''
+        paramiko.SSHClient().exec_command.return_value = (StringIO(''),
+                                                          Stdout(stdout),
+                                                          StringIO(stderr))
+        u = self.nodepool.image.update('provider', 'image')
+        m = ('nodepool -l /etc/nodepool/logging.conf '
+             'image-update provider image')
+        # consume the generator to execute the remote call
+        result = ''.join(x for x in u)
+        paramiko.SSHClient().exec_command.assert_called_with(m, get_pty=True)
+        self.assertEqual(stdout, result, result)
