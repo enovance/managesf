@@ -23,9 +23,7 @@ from pysflib.sfauth import get_cookie
 from requests.auth import HTTPBasicAuth
 
 from managesf.services import base
-from managesf.services.gerrit import membership
 from managesf.services.gerrit import project
-from managesf.services.gerrit import role
 from managesf.services.gerrit import user
 from managesf.services.gerrit import review
 from managesf.services.gerrit import repository
@@ -44,8 +42,6 @@ class Gerrit(base.BaseCodeReviewServicePlugin):
         super(Gerrit, self).__init__(conf)
         self.project = None
         self.user = None
-        self.membership = None
-        self.role = None
         self.repository = None
         self.review = None
         self.group = None
@@ -66,8 +62,6 @@ class SoftwareFactoryGerrit(Gerrit):
         super(SoftwareFactoryGerrit, self).__init__(conf)
         self.project = project.SFGerritProjectManager(self)
         self.user = user.SFGerritUserManager(self)
-        self.membership = membership.SFGerritMembershipManager(self)
-        self.role = role.SFGerritRoleManager(self)
         self.repository = repository.SFGerritRepositoryManager(self)
         self.review = review.SFGerritReviewManager(self)
         self.group = group.SFGerritGroupManager(self)
